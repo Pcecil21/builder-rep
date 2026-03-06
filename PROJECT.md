@@ -65,3 +65,17 @@ Over time, Builder Rep may expand into:
 - lightweight deal coordination
 - richer capability discovery across a network of ASBs
 
+## Runtime
+
+The app now supports a server-side `/api/chat` route for both the viewer chat and the builder studio interview.
+
+Environment variables:
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` optional, defaults to `gpt-4.1-mini`
+
+Local development:
+- copy `.env.example` to `.env.local`
+- set `OPENAI_API_KEY`
+- run `npm run dev -- --host 0.0.0.0`
+
+If no API key is present, the app falls back to mocked local behavior so the UI still works.
