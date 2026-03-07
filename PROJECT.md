@@ -71,7 +71,9 @@ The app now supports a server-side `/api/chat` route for both the viewer chat an
 
 Environment variables:
 - `OPENAI_API_KEY`
-- `OPENAI_MODEL` optional, defaults to `gpt-4.1-mini`
+
+Model configuration:
+- The server always uses `gpt-5.4`.
 
 Local development:
 - copy `.env.example` to `.env.local`

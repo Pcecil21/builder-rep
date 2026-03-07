@@ -1,5 +1,5 @@
-async function postChat(body) {
-  const response = await fetch("/api/chat", {
+async function postJson(url, body) {
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -15,19 +15,16 @@ async function postChat(body) {
   return response.json();
 }
 
-export async function requestViewerTurn({ builder, history, userText }) {
-  return postChat({
-    surface: "viewer",
-    builder,
+export async function requestViewerTurn({ slug, history, userText }) {
+  return postJson("/api/public/chat", {
+    slug,
     history,
     userText,
   });
 }
 
-export async function requestStudioTurn({ builder, history, userText, stage, currentProject }) {
-  return postChat({
-    surface: "studio",
-    builder,
+export async function requestStudioTurn({ history, userText, stage, currentProject }) {
+  return postJson("/api/studio/chat", {
     history,
     userText,
     stage,
