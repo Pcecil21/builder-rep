@@ -8,6 +8,10 @@ const projectMatchTerms = {
   "mission-control": ["mission control", "control", "ops", "oversight"],
 };
 
+function uniq(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
 function findProject(builder, text) {
   const lower = text.toLowerCase();
 
@@ -43,12 +47,32 @@ export function buildInitialMessages(builder) {
 }
 
 export function buildPromptActions(builder) {
-  return builder.promptStarts;
+  return uniq([...builder.promptStarts, "Show me the full ecosystem"]);
 }
 
 export function buildResponsePlan(builder, userText) {
   const lower = userText.toLowerCase();
   const matchedProject = findProject(builder, userText);
+
+  if (
+    lower.includes("ecosystem") ||
+    lower.includes("big picture") ||
+    lower.includes("overall setup") ||
+    lower.includes("full setup") ||
+    lower.includes("radar")
+  ) {
+    return [
+      {
+        role: "assistant",
+        text: "The ecosystem view is the fastest way to see what kind of builder this is and where the work goes deepest.",
+      },
+      {
+        role: "object",
+        objectType: "ecosystem",
+        data: {},
+      },
+    ];
+  }
 
   if (
     lower.includes("built") ||

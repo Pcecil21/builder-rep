@@ -13,6 +13,14 @@ export function colorForProject(project) {
   return project.accentColor ?? CATEGORY_COLORS[project.category] ?? "#1a1a1a";
 }
 
+function hostnameFromUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "project link";
+  }
+}
+
 function CardVisual({ project }) {
   const color = colorForProject(project);
   const type = project.id;
@@ -145,7 +153,7 @@ export function ProjectDetailObject({ project, onLinkOut }) {
         <button type="button" className="solid-button" onClick={() => onLinkOut(project.id)} style={{ background: color }}>
           Go deeper →
         </button>
-        <span>{new URL(project.primaryLink.url).hostname.replace(/^www\./, "")}</span>
+        <span>{hostnameFromUrl(project.primaryLink.url)}</span>
       </div>
       <div className="deep-card">
         <div className="deep-header">

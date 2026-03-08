@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { RADAR_AXES, RADAR_BUILD_TYPES } from "@/lib/radar";
 import { requestStudioTurn } from "../lib/api";
 
 const STAGES = [
@@ -76,6 +77,8 @@ function inferProjectDraft(input) {
     whyBuiltThisWay: "Chuckie needs a bit more context to explain the design logic behind it.",
     status: "prototype",
     featured: false,
+    buildType: "",
+    capabilities: [],
     tags: uniq([category, lower.includes("agent") ? "agent" : "", lower.includes("ai") ? "ai" : ""]),
     tools: [],
     systems: [],
@@ -141,6 +144,8 @@ function buildProjectPayload(draft) {
     whyBuiltThisWay: draft.whyBuiltThisWay || "Waiting for design rationale.",
     status: draft.status || "prototype",
     featured: Boolean(draft.featured),
+    buildType: draft.buildType || "",
+    capabilities: draft.capabilities || [],
     tags: draft.tags || [],
     tools: [],
     systems: [],
@@ -159,9 +164,18 @@ function buildProjectPayload(draft) {
 function ManualEditor({ project, onUpdateProjectField, onToggleFeatured }) {
   if (!project) return null;
 
+  const toggleCapability = (capabilityId) => {
+    const nextCapabilities = project.capabilities.includes(capabilityId)
+      ? project.capabilities.filter((item) => item !== capabilityId)
+      : [...project.capabilities, capabilityId];
+
+    onUpdateProjectField(project.id, "capabilities", nextCapabilities);
+  };
+
   return (
     <div className="review-editor">
       <div className="review-section-label">Manual Edit</div>
+      <p className="review-subcopy">Only tagged projects appear in the public ecosystem radar.</p>
       <div className="review-form">
         <label>
           Title
@@ -176,6 +190,21 @@ function ManualEditor({ project, onUpdateProjectField, onToggleFeatured }) {
             value={project.category}
             onChange={(event) => onUpdateProjectField(project.id, "category", event.target.value)}
           />
+        </label>
+        <label>
+          Radar Build Type
+          <select
+            className="review-select"
+            value={project.buildType}
+            onChange={(event) => onUpdateProjectField(project.id, "buildType", event.target.value)}
+          >
+            <option value="">Not mapped yet</option>
+            {RADAR_BUILD_TYPES.map((buildType) => (
+              <option key={buildType} value={buildType}>
+                {buildType}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="review-form-wide">
           One-line framing
@@ -204,6 +233,29 @@ function ManualEditor({ project, onUpdateProjectField, onToggleFeatured }) {
             }
           />
         </label>
+        <div className="review-form-wide">
+          <div className="review-section-label">Capability Axes</div>
+          <div className="capability-checklist">
+            {RADAR_AXES.map((axis) => {
+              const checked = project.capabilities.includes(axis.id);
+
+              return (
+                <label
+                  key={axis.id}
+                  className={`capability-pill${checked ? " capability-pill-active" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCapability(axis.id)}
+                  />
+                  <span>{axis.icon}</span>
+                  <strong>{axis.short}</strong>
+                </label>
+              );
+            })}
+          </div>
+        </div>
         <label className="review-featured-toggle">
           <input type="checkbox" checked={project.featured} onChange={() => onToggleFeatured(project.id)} />
           Featured project

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import BuilderEcosystem from "@/components/BuilderEcosystem";
 import {
   BrowseProjectRow,
   LinkOutObject,
@@ -59,6 +60,14 @@ function buildViewerEntries(builder, payload) {
     });
   }
 
+  if (payload.intent === "ecosystem") {
+    entries.push({
+      role: "object",
+      objectType: "ecosystem",
+      data: {},
+    });
+  }
+
   if (payload.intent === "linkout" && payload.projectIds?.[0]) {
     const project = getProject(builder, payload.projectIds[0]);
 
@@ -105,7 +114,7 @@ function Typing() {
   );
 }
 
-function MessageList({ builder, messages, typing, onSelectProject, onLinkOut }) {
+function MessageList({ builder, slug, messages, typing, onSelectProject, onLinkOut }) {
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -155,6 +164,10 @@ function MessageList({ builder, messages, typing, onSelectProject, onLinkOut }) 
             content = <LinkOutObject project={projects[0]} link={message.data.link} />;
           }
 
+          if (message.objectType === "ecosystem") {
+            content = <BuilderEcosystem builder={builder} slug={slug} surface="chat" />;
+          }
+
           return (
             <div key={message.id} className="rich-row">
               {content}
@@ -170,12 +183,15 @@ function MessageList({ builder, messages, typing, onSelectProject, onLinkOut }) 
   );
 }
 
-function BrowseView({ builder, onOpenProject }) {
+function BrowseView({ builder, slug, onOpenProject }) {
   return (
     <div className="browse-wrap">
       <div className="browse-eyebrow">Portfolio</div>
       <h1>{builder.displayName}</h1>
       <p>{builder.shortBio}</p>
+      <a className="browse-ecosystem-link" href={`/rep/${slug}/portfolio`}>
+        Open the full ecosystem view
+      </a>
       <div className="browse-list">
         {builder.projects.map((project) => (
           <BrowseProjectRow key={project.id} project={project} onOpen={onOpenProject} />
@@ -205,6 +221,23 @@ export default function PublicRepClient({ builder, slug }) {
 
       setMessages((current) => [...current, { ...entry, id: makeId() }]);
     }
+  };
+
+  const showEcosystem = async () => {
+    await appendMessages(
+      [
+        {
+          role: "assistant",
+          text: "This is the fastest way to understand the full shape of the work.",
+        },
+        {
+          role: "object",
+          objectType: "ecosystem",
+          data: {},
+        },
+      ],
+      { withTyping: false },
+    );
   };
 
   const sendUserMessage = async (userText) => {
@@ -286,6 +319,9 @@ export default function PublicRepClient({ builder, slug }) {
           </div>
         </div>
         <div className="topbar-actions">
+          <button type="button" className="ghost-button" onClick={showEcosystem}>
+            See Full Ecosystem
+          </button>
           <button
             type="button"
             className="ghost-button"
@@ -310,6 +346,7 @@ export default function PublicRepClient({ builder, slug }) {
             <div className="chat-frame">
               <MessageList
                 builder={builder}
+                slug={slug}
                 messages={messages}
                 typing={typing}
                 onSelectProject={handleSelectProject}
@@ -328,7 +365,7 @@ export default function PublicRepClient({ builder, slug }) {
                 <ProjectDetailObject project={browseProject} onLinkOut={handleLinkOut} />
               </div>
             ) : (
-              <BrowseView builder={builder} onOpenProject={setBrowseProjectId} />
+              <BrowseView builder={builder} slug={slug} onOpenProject={setBrowseProjectId} />
             )}
           </div>
         )}
