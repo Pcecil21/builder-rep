@@ -736,7 +736,7 @@ export default function BuilderSetup({
       <aside className="studio-sidebar">
         <div className="studio-sidebar-head">
           <div className="landing-eyebrow">Builder Studio</div>
-          <strong>Build the rep from facts first</strong>
+          <strong>Build your Agent Representative (Rep) from facts first</strong>
           <span>{buildCountLabel}</span>
         </div>
 

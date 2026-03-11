@@ -28,7 +28,8 @@ export default function StudioShell({
   const latestBuilderRef = useRef(initialBuilder);
 
   const publishLabel = useMemo(
-    () => (publishedAt ? "Republish Public Rep" : "Publish Public Rep"),
+    () =>
+      publishedAt ? "Republish Your Agent Representative" : "Publish Your Agent Representative",
     [publishedAt],
   );
 
@@ -157,7 +158,7 @@ export default function StudioShell({
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setSaveError(payload.error || "Unable to publish the builder rep.");
+        setSaveError(payload.error || "Unable to publish your agent representative.");
         return;
       }
 
@@ -168,7 +169,7 @@ export default function StudioShell({
         latestBuilderRef.current = payload.builder;
       }
     } catch {
-      setSaveError("Unable to publish the builder rep.");
+      setSaveError("Unable to publish your agent representative.");
     } finally {
       setPublishPending(false);
     }
@@ -248,7 +249,7 @@ export default function StudioShell({
         {shareUrl ? (
           <div className="studio-share-card">
             <div>
-              <div className="review-section-label">Public Link</div>
+              <div className="review-section-label">Your Agent Representative (Rep) Link</div>
               <a href={shareUrl} target="_blank" rel="noreferrer">
                 {shareUrl}
               </a>
