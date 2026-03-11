@@ -36,6 +36,9 @@ export const demoBuilder = {
   projects: [
     {
       id: "camp-claw",
+      kind: "project",
+      primaryType: "Creative",
+      focusAreas: ["education", "content-creation", "consumer-app"],
       title: "Camp Claw",
       category: "public app",
       shortDescription: "A builder onramp structured around shipping real agent artifacts.",
@@ -90,6 +93,9 @@ export const demoBuilder = {
     },
     {
       id: "aidb-new-year",
+      kind: "project",
+      primaryType: "Creative",
+      focusAreas: ["consumer-app", "video-media", "content-creation"],
       title: "AIDB New Year",
       category: "experiment",
       shortDescription: "A fast, AI-native interactive experience built and shipped on a compressed timeline.",
@@ -133,6 +139,9 @@ export const demoBuilder = {
     },
     {
       id: "sponsor-dashboard",
+      kind: "project",
+      primaryType: "Other",
+      focusAreas: ["automation", "data-analysis", "enterprise-tool"],
       title: "Sponsor Dashboard",
       category: "dashboard",
       shortDescription: "A sponsor-facing reporting surface that removes manual campaign updates.",
@@ -176,6 +185,9 @@ export const demoBuilder = {
     },
     {
       id: "holmes",
+      kind: "agent",
+      primaryType: "Agent",
+      focusAreas: ["research", "search-retrieval", "comms-chat"],
       title: "Holmes",
       category: "agent",
       shortDescription: "An AI opportunity partner that runs structured discovery conversations.",
@@ -230,6 +242,9 @@ export const demoBuilder = {
     },
     {
       id: "mycroft",
+      kind: "agent",
+      primaryType: "Agent",
+      focusAreas: ["planning", "research", "enterprise-tool"],
       title: "Mycroft",
       category: "strategy tool",
       shortDescription: "A conversational strategy builder for organization-level AI planning.",
@@ -273,6 +288,9 @@ export const demoBuilder = {
     },
     {
       id: "openclaw-team",
+      kind: "agent",
+      primaryType: "Agent Team",
+      focusAreas: ["operations", "automation", "research", "writing", "coding-dev"],
       title: "10-Agent OpenClaw Team",
       category: "multi-agent system",
       shortDescription: "A coordinated agent organization with specialized roles and oversight.",
@@ -327,6 +345,9 @@ export const demoBuilder = {
     },
     {
       id: "mission-control",
+      kind: "project",
+      primaryType: "Other",
+      focusAreas: ["operations", "enterprise-tool", "data-analysis"],
       title: "Mission Control",
       category: "internal tool",
       shortDescription: "An oversight and management interface for the agent team.",

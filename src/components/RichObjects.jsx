@@ -185,9 +185,15 @@ export function ProjectDetailObject({ project, onLinkOut }) {
         </div>
         <p className="deep-copy">{project.whatItDemonstrates}</p>
         <div className="screens-title">Screenshots</div>
-        <div className="screen-placeholder" style={{ "--project-soft": `${color}10` }}>
-          <span>{project.visuals[0]?.title ?? "Project visual"}</span>
-        </div>
+        {project.visuals[0]?.url ? (
+          <div className="screen-placeholder screen-placeholder-image" style={{ "--project-soft": `${color}10` }}>
+            <img src={project.visuals[0].url} alt={project.visuals[0].title || `${project.title} screenshot`} />
+          </div>
+        ) : (
+          <div className="screen-placeholder" style={{ "--project-soft": `${color}10` }}>
+            <span>{project.visuals[0]?.title ?? "Project visual"}</span>
+          </div>
+        )}
       </div>
     </div>
   );
