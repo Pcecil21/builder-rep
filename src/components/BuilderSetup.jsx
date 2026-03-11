@@ -1,88 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FOCUS_AREAS, PRIMARY_TYPES } from "@/lib/build-taxonomy";
 import { requestStudioTurn } from "../lib/api";
-
-const PROFILE_QUESTIONS = [
-  {
-    id: "builder-kind",
-    label: "Builder framing",
-    prompt: "What kind of builder are you?",
-  },
-  {
-    id: "builder-patterns",
-    label: "Recurring patterns",
-    prompt: "What patterns tie your work together?",
-  },
-  {
-    id: "builder-opening",
-    label: "Opening angle",
-    prompt: "What should Chuckie lead with?",
-  },
-];
-
-const BUILD_QUESTIONS = [
-  {
-    id: "build-what",
-    label: "What it is",
-    prompt: "What is this build?",
-  },
-  {
-    id: "build-why",
-    label: "Why it exists",
-    prompt: "Why did you build it?",
-  },
-  {
-    id: "build-key",
-    label: "Key takeaway",
-    prompt: "What should someone understand right away?",
-  },
-];
-
-function looksEmpty(value, placeholders = []) {
-  if (typeof value !== "string" || !value.trim()) {
-    return true;
-  }
-
-  return placeholders.some((placeholder) => value.includes(placeholder));
-}
-
-function getNextProfileQuestion(builder) {
-  if (looksEmpty(builder.shortBio, ["Builder profile in progress."])) {
-    return PROFILE_QUESTIONS[0];
-  }
-
-  if (looksEmpty(builder.longerIntro)) {
-    return PROFILE_QUESTIONS[1];
-  }
-
-  if (looksEmpty(builder.featuredIntroLine, ["teaching me how to represent the work clearly"])) {
-    return PROFILE_QUESTIONS[2];
-  }
-
-  return PROFILE_QUESTIONS[2];
-}
-
-function getNextBuildQuestion(build) {
-  if (!build) {
-    return BUILD_QUESTIONS[0];
-  }
-
-  if (looksEmpty(build.whatItIs, ["Drafted from conversation."])) {
-    return BUILD_QUESTIONS[0];
-  }
-
-  if (looksEmpty(build.whyItMatters, ["Waiting for builder emphasis."])) {
-    return BUILD_QUESTIONS[1];
-  }
-
-  if (looksEmpty(build.whatItDemonstrates, ["Waiting for builder emphasis."])) {
-    return BUILD_QUESTIONS[2];
-  }
-
-  return BUILD_QUESTIONS[2];
-}
 
 function buildDraft() {
   const title = "New Build";
@@ -100,6 +20,7 @@ function buildDraft() {
     whyItMatters: "",
     whatItDemonstrates: "",
     whyBuiltThisWay: "",
+    whatChuckieKnows: "",
     status: "prototype",
     featured: true,
     tags: [],
@@ -126,6 +47,7 @@ function getProjectEditorShape(project) {
     kind: project.kind === "agent" ? "agent" : "project",
     primaryType: typeof project.primaryType === "string" ? project.primaryType : "",
     focusAreas: Array.isArray(project.focusAreas) ? project.focusAreas : [],
+    whatChuckieKnows: typeof project.whatChuckieKnows === "string" ? project.whatChuckieKnows : "",
     buildType: typeof project.buildType === "string" ? project.buildType : "",
     capabilities: Array.isArray(project.capabilities) ? project.capabilities : [],
     primaryLink:
@@ -204,6 +126,16 @@ function BuilderProfileEditor({ builder, onUpdateBuilderField, onUpdateListField
               )
             }
             placeholder="Agent systems, orchestration, AI-native product design"
+          />
+        </label>
+
+        <label className="studio-form-wide">
+          What Chuckie Knows
+          <textarea
+            rows="6"
+            value={builder.whatChuckieKnows}
+            onChange={(event) => onUpdateBuilderField("whatChuckieKnows", event.target.value)}
+            placeholder="Facts, context, judgment calls, and background Chuckie should keep in mind."
           />
         </label>
       </div>
@@ -544,6 +476,22 @@ function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
       <LinkListEditor project={project} onUpdateProjectField={onUpdateProjectField} />
       <ScreenshotUploader project={project} onUpdateProjectField={onUpdateProjectField} />
 
+      <div className="studio-section-block">
+        <div className="review-section-label">What Chuckie Knows</div>
+        <p className="review-subcopy">Use this for extra context Chuckie should remember about this build.</p>
+        <div className="studio-form-grid">
+          <label className="studio-form-wide">
+            Notes
+            <textarea
+              rows="6"
+              value={project.whatChuckieKnows}
+              onChange={(event) => onUpdateProjectField(project.id, "whatChuckieKnows", event.target.value)}
+              placeholder="What matters, what makes this interesting, and what Chuckie should remember."
+            />
+          </label>
+        </div>
+      </div>
+
       <div className="studio-section-block studio-danger-zone">
         <div className="review-section-label">Delete This Build</div>
         <p className="review-subcopy studio-danger-copy">
@@ -561,45 +509,43 @@ function ChuckieRefinePanel({
   builder,
   selectedProject,
   onUpdateBuilderField,
-  onUpdateListField,
   onUpdateProjectField,
 }) {
-  const [target, setTarget] = useState(selectedProject ? "build" : "profile");
+  const [target, setTarget] = useState("profile");
+  const [selectedBuildId, setSelectedBuildId] = useState(selectedProject?.id ?? builder.projects[0]?.id ?? "");
   const [input, setInput] = useState("");
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const question = target === "profile" ? getNextProfileQuestion(builder) : getNextBuildQuestion(selectedProject);
+  useEffect(() => {
+    if (!selectedBuildId && (selectedProject?.id || builder.projects[0]?.id)) {
+      setSelectedBuildId(selectedProject?.id ?? builder.projects[0]?.id ?? "");
+    }
+  }, [builder.projects, selectedBuildId, selectedProject?.id]);
 
-  const applyProfilePatch = (patch) => {
-    if (patch.shortBio) {
-      onUpdateBuilderField("shortBio", patch.shortBio);
-    }
-    if (patch.longerIntro) {
-      onUpdateBuilderField("longerIntro", patch.longerIntro);
-    }
-    if (patch.featuredIntroLine) {
-      onUpdateBuilderField("featuredIntroLine", patch.featuredIntroLine);
-    }
-    if (Array.isArray(patch.themes) && patch.themes.length) {
-      onUpdateListField("themes", [...new Set([...(builder.themes ?? []), ...patch.themes])]);
-    }
-  };
+  const activeProject = getProjectEditorShape(
+    builder.projects.find((project) => project.id === selectedBuildId) ?? selectedProject ?? null,
+  );
 
-  const applyBuildPatch = (patch) => {
-    if (!selectedProject) {
-      return;
+  const appendKnowledge = (existing, nextNote) => {
+    const current = typeof existing === "string" ? existing.trim() : "";
+    const addition = typeof nextNote === "string" ? nextNote.trim() : "";
+
+    if (!addition) {
+      return current;
     }
 
-    Object.entries(patch).forEach(([field, value]) => {
-      onUpdateProjectField(selectedProject.id, field, value);
-    });
+    if (!current) {
+      return addition;
+    }
+
+    return `${current}\n\n${addition}`;
   };
 
   const submit = async () => {
     const trimmed = input.trim();
-    if (!trimmed || loading) {
+    if (!trimmed || loading || (target === "build" && !activeProject)) {
       return;
     }
 
@@ -611,21 +557,24 @@ function ChuckieRefinePanel({
         history,
         userText: trimmed,
         stage: target === "profile" ? "profile-refine" : "build-refine",
-        currentProject: target === "build" ? selectedProject : null,
-        questionId: question.id,
+        currentProject: target === "build" ? activeProject : null,
       });
 
-      if (response.builderPatch) {
-        applyProfilePatch(response.builderPatch);
-      }
-
-      if (response.projectPatch) {
-        applyBuildPatch(response.projectPatch);
+      if (target === "profile") {
+        onUpdateBuilderField(
+          "whatChuckieKnows",
+          appendKnowledge(builder.whatChuckieKnows, response.knowledgeNote),
+        );
+      } else if (activeProject) {
+        onUpdateProjectField(
+          activeProject.id,
+          "whatChuckieKnows",
+          appendKnowledge(activeProject.whatChuckieKnows, response.knowledgeNote),
+        );
       }
 
       setHistory((current) => [
         ...current,
-        { role: "assistant", text: question.prompt },
         { role: "user", text: trimmed },
         { role: "assistant", text: response.reply || "Captured." },
       ]);
@@ -640,9 +589,9 @@ function ChuckieRefinePanel({
   return (
     <div className="studio-panel">
       <div className="studio-panel-head">
-        <div className="review-section-label">Refine With Chuckie</div>
-        <h2>Optional, smaller questions</h2>
-        <p>Chuckie is no longer the main workflow. Use him only when you want sharper framing for your profile or a specific build.</p>
+        <div className="review-section-label">Refine Profile With Chuckie</div>
+        <h2>What do you want to talk with Chuckie about?</h2>
+        <p>Choose your background or one of your builds, then tell Chuckie what he should understand better.</p>
       </div>
 
       <div className="studio-toggle-row">
@@ -652,39 +601,62 @@ function ChuckieRefinePanel({
           onClick={() => setTarget("profile")}
         >
           <span>◎</span>
-          <strong>About You</strong>
+          <strong>My Background</strong>
         </button>
         <button
           type="button"
           className={`taxonomy-pill${target === "build" ? " taxonomy-pill-active" : ""}`}
-          onClick={() => selectedProject && setTarget("build")}
-          disabled={!selectedProject}
+          onClick={() => activeProject && setTarget("build")}
+          disabled={!activeProject}
         >
           <span>◧</span>
-          <strong>{selectedProject ? selectedProject.title : "Select a build first"}</strong>
+          <strong>My Agents/Projects</strong>
         </button>
       </div>
 
-      <div className="studio-question-card">
-        <div className="review-section-label">{question.label}</div>
-        <h3>{question.prompt}</h3>
-      </div>
+      {target === "build" ? (
+        <div className="studio-form-grid">
+          <label className="studio-form-wide">
+            Which one?
+            <select
+              className="review-select"
+              value={activeProject?.id ?? ""}
+              onChange={(event) => setSelectedBuildId(event.target.value)}
+            >
+              {builder.projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title || "Untitled build"}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       <div className="studio-form-grid">
         <label className="studio-form-wide">
-          Your answer
+          What should Chuckie understand better?
           <textarea
             rows="4"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Answer naturally. Chuckie will turn this into cleaner public-facing framing."
+            placeholder={
+              target === "profile"
+                ? "Add background, context, tone, or patterns Chuckie should remember about you."
+                : "Add context, stakes, reasoning, or nuance Chuckie should remember about this build."
+            }
           />
         </label>
       </div>
 
       <div className="builder-composer-actions">
-        <button type="button" className="solid-button builder-send-button" onClick={submit} disabled={!input.trim() || loading}>
-          {loading ? "Sending..." : "Send to Chuckie"}
+        <button
+          type="button"
+          className="solid-button builder-send-button"
+          onClick={submit}
+          disabled={!input.trim() || loading || (target === "build" && !activeProject)}
+        >
+          {loading ? "Talking..." : "Talk to Chuckie"}
         </button>
       </div>
 
@@ -764,7 +736,7 @@ export default function BuilderSetup({
             className={`studio-nav-button${view === "refine" ? " studio-nav-button-active" : ""}`}
             onClick={() => setView("refine")}
           >
-            Refine with Chuckie
+            Refine Profile with Chuckie
           </button>
         </div>
 
@@ -810,7 +782,6 @@ export default function BuilderSetup({
             builder={builder}
             selectedProject={selectedProject}
             onUpdateBuilderField={onUpdateBuilderField}
-            onUpdateListField={onUpdateListField}
             onUpdateProjectField={onUpdateProjectField}
           />
         ) : (
