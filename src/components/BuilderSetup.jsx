@@ -524,6 +524,12 @@ function ChuckieRefinePanel({
     }
   }, [builder.projects, selectedBuildId, selectedProject?.id]);
 
+  useEffect(() => {
+    setHistory([]);
+    setInput("");
+    setError("");
+  }, [target, selectedBuildId]);
+
   const activeProject = getProjectEditorShape(
     builder.projects.find((project) => project.id === selectedBuildId) ?? selectedProject ?? null,
   );
@@ -551,6 +557,8 @@ function ChuckieRefinePanel({
 
     setLoading(true);
     setError("");
+    setInput("");
+    setHistory((current) => [...current, { role: "user", text: trimmed }]);
 
     try {
       const response = await requestStudioTurn({
@@ -575,11 +583,11 @@ function ChuckieRefinePanel({
 
       setHistory((current) => [
         ...current,
-        { role: "user", text: trimmed },
         { role: "assistant", text: response.reply || "Captured." },
       ]);
-      setInput("");
     } catch (submitError) {
+      setHistory((current) => current.slice(0, -1));
+      setInput(trimmed);
       setError(submitError instanceof Error ? submitError.message : "Unable to talk to Chuckie right now.");
     } finally {
       setLoading(false);
@@ -589,9 +597,9 @@ function ChuckieRefinePanel({
   return (
     <div className="studio-panel">
       <div className="studio-panel-head">
-        <div className="review-section-label">Refine Profile With Chuckie</div>
-        <h2>What do you want to talk with Chuckie about?</h2>
-        <p>Choose your background or one of your builds, then tell Chuckie what he should understand better.</p>
+        <div className="review-section-label">Talk to Chuckie</div>
+        <h2>Talk to Chuckie</h2>
+        <p>Choose whether this conversation is about your background or one of your builds.</p>
       </div>
 
       <div className="studio-toggle-row">
@@ -617,7 +625,7 @@ function ChuckieRefinePanel({
       {target === "build" ? (
         <div className="studio-form-grid">
           <label className="studio-form-wide">
-            Which one?
+            Which build?
             <select
               className="review-select"
               value={activeProject?.id ?? ""}
@@ -633,46 +641,57 @@ function ChuckieRefinePanel({
         </div>
       ) : null}
 
-      <div className="studio-form-grid">
-        <label className="studio-form-wide">
-          What should Chuckie understand better?
-          <textarea
-            rows="4"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder={
-              target === "profile"
-                ? "Add background, context, tone, or patterns Chuckie should remember about you."
-                : "Add context, stakes, reasoning, or nuance Chuckie should remember about this build."
-            }
-          />
-        </label>
+      <div className="studio-chat-surface">
+        {history.length ? (
+          <div className="builder-conversation">
+            {history.map((entry, index) =>
+              entry.role === "user" ? (
+                <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
+                  <p>{entry.text}</p>
+                </div>
+              ) : (
+                <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
+                  <div className="builder-avatar">◎</div>
+                  <p>{entry.text}</p>
+                </div>
+              ),
+            )}
+            {loading ? (
+              <div className="builder-line builder-line-chuckie">
+                <div className="builder-avatar">◎</div>
+                <p>Thinking...</p>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="studio-chat-empty">Start the conversation.</div>
+        )}
       </div>
 
-      <div className="builder-composer-actions">
-        <button
-          type="button"
-          className="solid-button builder-send-button"
-          onClick={submit}
-          disabled={!input.trim() || loading || (target === "build" && !activeProject)}
-        >
-          {loading ? "Talking..." : "Talk to Chuckie"}
-        </button>
+      <div className="builder-composer">
+        <textarea
+          rows="4"
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder={
+            target === "profile"
+              ? "Tell Chuckie more about your background, how you work, or how you want to be represented."
+              : "Tell Chuckie more about this build, why it matters, or what people should understand."
+          }
+        />
+        <div className="builder-composer-actions">
+          <button
+            type="button"
+            className="solid-button builder-send-button"
+            onClick={submit}
+            disabled={!input.trim() || loading || (target === "build" && !activeProject)}
+          >
+            {loading ? "Talking..." : "Talk to Chuckie"}
+          </button>
+        </div>
       </div>
 
       {error ? <div className="studio-error">{error}</div> : null}
-
-      <div className="studio-refine-history">
-        {history.map((entry, index) => (
-          <div
-            key={`${entry.role}-${index}`}
-            className={`studio-refine-line${entry.role === "user" ? " studio-refine-line-user" : ""}`}
-          >
-            <strong>{entry.role === "user" ? "You" : "Chuckie"}</strong>
-            <p>{entry.text}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -736,7 +755,7 @@ export default function BuilderSetup({
             className={`studio-nav-button${view === "refine" ? " studio-nav-button-active" : ""}`}
             onClick={() => setView("refine")}
           >
-            Refine Profile with Chuckie
+            Talk to Chuckie
           </button>
         </div>
 

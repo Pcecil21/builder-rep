@@ -14,7 +14,6 @@ const schema = z.object({
   userText: z.string().trim().min(1).max(2000),
   stage: z.enum(["discovery", "projects", "review", "profile-refine", "build-refine"]).optional(),
   currentProject: z.record(z.string(), z.any()).nullable().optional(),
-  questionId: z.string().max(64).optional(),
 });
 
 export async function POST(request) {
@@ -26,7 +25,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { history = [], userText, stage, currentProject, questionId } = schema.parse(body);
+    const { history = [], userText, stage, currentProject } = schema.parse(body);
     const store = getStore();
     const record = await store.getBuilderRecordByUserId(current.user.id);
 
@@ -44,7 +43,6 @@ export async function POST(request) {
       userText,
       stage: stage ?? "discovery",
       currentProject: currentProject ?? null,
-      questionId: questionId ?? "",
     });
 
     return NextResponse.json(payload);
