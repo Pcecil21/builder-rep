@@ -432,6 +432,20 @@ function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
     );
   }
 
+  const confirmDelete = () => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        "Delete this build? This permanently removes it from your Agent Representative.",
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    onDeleteProject(project.id);
+  };
+
   return (
     <div className="studio-panel">
       <div className="studio-panel-head">
@@ -497,7 +511,7 @@ function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
         <p className="review-subcopy studio-danger-copy">
           This permanently removes this build from your Agent Representative. This action is final.
         </p>
-        <button type="button" className="ghost-button studio-danger-button" onClick={() => onDeleteProject(project.id)}>
+        <button type="button" className="ghost-button studio-danger-button" onClick={confirmDelete}>
           Delete build
         </button>
       </div>
