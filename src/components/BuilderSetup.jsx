@@ -487,7 +487,7 @@ function FocusAreaPicker({ project, onUpdateProjectField }) {
   );
 }
 
-function BuildEditor({ project, onUpdateProjectField }) {
+function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
   if (!project) {
     return (
       <div className="studio-panel">
@@ -543,6 +543,16 @@ function BuildEditor({ project, onUpdateProjectField }) {
       <FocusAreaPicker project={project} onUpdateProjectField={onUpdateProjectField} />
       <LinkListEditor project={project} onUpdateProjectField={onUpdateProjectField} />
       <ScreenshotUploader project={project} onUpdateProjectField={onUpdateProjectField} />
+
+      <div className="studio-section-block studio-danger-zone">
+        <div className="review-section-label">Delete This Build</div>
+        <p className="review-subcopy studio-danger-copy">
+          This permanently removes this build from your Agent Representative. This action is final.
+        </p>
+        <button type="button" className="ghost-button studio-danger-button" onClick={() => onDeleteProject(project.id)}>
+          Delete build
+        </button>
+      </div>
     </div>
   );
 }
@@ -767,25 +777,21 @@ export default function BuilderSetup({
 
           <div className="studio-build-list">
             {builder.projects.map((project) => (
-              <div key={project.id} className="studio-build-row">
-                <button
-                  type="button"
-                  className={`studio-build-card${selectedProject?.id === project.id && view === "build" ? " studio-build-card-active" : ""}`}
-                  onClick={() => {
-                    setSelectedProjectId(project.id);
-                    setView("build");
-                  }}
-                >
-                  <div className="studio-build-card-top">
-                    <span>{project.primaryType || "Build"}</span>
-                  </div>
-                  <h4>{project.title || "Untitled build"}</h4>
-                  <p>{project.shortDescription || "No description yet."}</p>
-                </button>
-                <button type="button" className="studio-build-delete" onClick={() => deleteBuild(project.id)}>
-                  Delete
-                </button>
-              </div>
+              <button
+                key={project.id}
+                type="button"
+                className={`studio-build-card${selectedProject?.id === project.id && view === "build" ? " studio-build-card-active" : ""}`}
+                onClick={() => {
+                  setSelectedProjectId(project.id);
+                  setView("build");
+                }}
+              >
+                <div className="studio-build-card-top">
+                  <span>{project.primaryType || "Build"}</span>
+                </div>
+                <h4>{project.title || "Untitled build"}</h4>
+                <p>{project.shortDescription || "No description yet."}</p>
+              </button>
             ))}
           </div>
         </div>
@@ -809,6 +815,7 @@ export default function BuilderSetup({
         ) : (
           <BuildEditor
             project={selectedProject}
+            onDeleteProject={deleteBuild}
             onUpdateProjectField={onUpdateProjectField}
           />
         )}

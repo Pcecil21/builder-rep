@@ -616,13 +616,6 @@ a {
   margin-top: 14px;
 }
 
-.studio-build-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: start;
-}
-
 .studio-build-card {
   width: 100%;
   padding: 14px;
@@ -661,19 +654,6 @@ a {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
-}
-
-.studio-build-delete {
-  align-self: center;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1;
-  padding: 10px 12px;
-  cursor: pointer;
 }
 
 .studio-content {
@@ -764,6 +744,22 @@ a {
   flex-direction: column;
   gap: 12px;
   margin-top: 8px;
+}
+
+.studio-danger-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.studio-danger-copy {
+  max-width: 560px;
+}
+
+.studio-danger-button {
+  margin-top: 14px;
+  color: #8f245d;
+  border-color: rgba(143, 36, 93, 0.18);
 }
 
 .studio-link-card {
@@ -2152,14 +2148,9 @@ a {
   }
 
   .builder-workspace,
-  .studio-build-row,
   .studio-visual-grid,
   .studio-form-grid {
     grid-template-columns: 1fr;
-  }
-
-  .studio-build-delete {
-    justify-self: start;
   }
 
   .builder-review {
