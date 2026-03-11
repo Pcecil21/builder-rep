@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { FOCUS_AREAS, PRIMARY_TYPES } from "@/lib/build-taxonomy";
-import { getAxisById } from "@/lib/radar";
 import { requestStudioTurn } from "../lib/api";
 
 const PROFILE_QUESTIONS = [
@@ -102,7 +101,7 @@ function buildDraft() {
     whatItDemonstrates: "",
     whyBuiltThisWay: "",
     status: "prototype",
-    featured: false,
+    featured: true,
     tags: [],
     tools: [],
     systems: [],
@@ -250,10 +249,10 @@ function LinkListEditor({ project, onUpdateProjectField }) {
 
   return (
     <div className="studio-section-block">
-      <div className="review-section-label">Relevant Links</div>
+      <div className="review-section-label">Links</div>
       <div className="studio-form-grid">
         <label>
-          Primary link label
+          What is this link?
           <input
             value={project.primaryLink.title}
             onChange={(event) => updatePrimaryLink("title", event.target.value)}
@@ -262,7 +261,7 @@ function LinkListEditor({ project, onUpdateProjectField }) {
         </label>
 
         <label>
-          Primary link URL
+          Link URL
           <input
             value={project.primaryLink.url}
             onChange={(event) => updatePrimaryLink("url", event.target.value)}
@@ -271,7 +270,7 @@ function LinkListEditor({ project, onUpdateProjectField }) {
         </label>
 
         <label className="studio-form-wide">
-          Primary link description
+          Description
           <input
             value={project.primaryLink.description}
             onChange={(event) => updatePrimaryLink("description", event.target.value)}
@@ -281,9 +280,9 @@ function LinkListEditor({ project, onUpdateProjectField }) {
       </div>
 
       <div className="studio-subsection-head">
-        <strong>Additional links</strong>
+        <strong>More links</strong>
         <button type="button" className="ghost-button" onClick={addSupportingLink}>
-          Add link
+          Add another link
         </button>
       </div>
 
@@ -292,14 +291,14 @@ function LinkListEditor({ project, onUpdateProjectField }) {
           <div key={`${project.id}-supporting-${index}`} className="studio-link-card">
             <div className="studio-form-grid">
               <label>
-                Label
+                What is this link?
                 <input
                   value={link.title}
                   onChange={(event) => updateSupportingLink(index, "title", event.target.value)}
                 />
               </label>
               <label>
-                URL
+                Link URL
                 <input
                   value={link.url}
                   onChange={(event) => updateSupportingLink(index, "url", event.target.value)}
@@ -386,10 +385,10 @@ function ScreenshotUploader({ project, onUpdateProjectField }) {
       <div className="studio-subsection-head">
         <div>
           <div className="review-section-label">Screenshots</div>
-          <p className="review-subcopy">Upload real screenshots and keep their captions editable.</p>
+          <p className="review-subcopy">Add screenshots people should see.</p>
         </div>
         <label className="ghost-button studio-upload-button">
-          {uploading ? "Uploading..." : "Upload screenshot"}
+          {uploading ? "Uploading..." : "Upload image"}
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -407,21 +406,21 @@ function ScreenshotUploader({ project, onUpdateProjectField }) {
           <div key={`${project.id}-visual-${index}`} className="studio-visual-card">
             {visual.url ? <img src={visual.url} alt={visual.title || "Uploaded screenshot"} /> : null}
             <label>
-              Caption
+              What is shown?
               <input
                 value={visual.title}
                 onChange={(event) => updateVisual(index, "title", event.target.value)}
               />
             </label>
             <label>
-              Notes
+              Optional note
               <input
                 value={visual.description}
                 onChange={(event) => updateVisual(index, "description", event.target.value)}
               />
             </label>
             <button type="button" className="builder-review-link" onClick={() => removeVisual(index)}>
-              Remove screenshot
+              Delete image
             </button>
           </div>
         ))}
@@ -488,36 +487,7 @@ function FocusAreaPicker({ project, onUpdateProjectField }) {
   );
 }
 
-function DerivedMapping({ project }) {
-  return (
-    <div className="studio-derived-card">
-      <div className="review-section-label">Portfolio Mapping</div>
-      <div className="studio-derived-row">
-        <span>Radar build type</span>
-        <strong>{project.buildType || "Not derived yet"}</strong>
-      </div>
-      <div className="studio-derived-row studio-derived-row-stack">
-        <span>Radar capability axes</span>
-        <div className="studio-derived-tags">
-          {project.capabilities.length ? (
-            project.capabilities.map((capabilityId) => {
-              const axis = getAxisById(capabilityId);
-              return (
-                <span key={capabilityId} className="ecosystem-capability-tag">
-                  {axis?.icon} {axis?.short}
-                </span>
-              );
-            })
-          ) : (
-            <span className="review-muted">Choose a broader taxonomy above and this will fill automatically.</span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BuildEditor({ project, onUpdateProjectField, onToggleFeatured }) {
+function BuildEditor({ project, onUpdateProjectField }) {
   if (!project) {
     return (
       <div className="studio-panel">
@@ -573,12 +543,6 @@ function BuildEditor({ project, onUpdateProjectField, onToggleFeatured }) {
       <FocusAreaPicker project={project} onUpdateProjectField={onUpdateProjectField} />
       <LinkListEditor project={project} onUpdateProjectField={onUpdateProjectField} />
       <ScreenshotUploader project={project} onUpdateProjectField={onUpdateProjectField} />
-      <DerivedMapping project={project} />
-
-      <label className="review-featured-toggle">
-        <input type="checkbox" checked={project.featured} onChange={() => onToggleFeatured(project.id)} />
-        Featured on the public rep
-      </label>
     </div>
   );
 }
@@ -735,8 +699,8 @@ export default function BuilderSetup({
   builder,
   onUpdateBuilderField,
   onUpdateListField,
-  onToggleFeatured,
   onCreateProject,
+  onDeleteProject = () => {},
   onUpdateProjectField,
 }) {
   const [view, setView] = useState("profile");
@@ -750,6 +714,16 @@ export default function BuilderSetup({
     const projectId = onCreateProject(buildDraft());
     setSelectedProjectId(projectId);
     setView("build");
+  };
+
+  const deleteBuild = (projectId) => {
+    const remainingProjects = builder.projects.filter((project) => project.id !== projectId);
+    onDeleteProject(projectId);
+
+    if (selectedProjectId === projectId) {
+      setSelectedProjectId(remainingProjects[0]?.id ?? null);
+      setView(remainingProjects.length ? "build" : "profile");
+    }
   };
 
   const buildCountLabel = useMemo(
@@ -793,22 +767,25 @@ export default function BuilderSetup({
 
           <div className="studio-build-list">
             {builder.projects.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                className={`studio-build-card${selectedProject?.id === project.id && view === "build" ? " studio-build-card-active" : ""}`}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  setView("build");
-                }}
-              >
-                <div className="studio-build-card-top">
-                  <span>{project.primaryType || "Build"}</span>
-                  {project.featured ? <strong>Featured</strong> : null}
-                </div>
-                <h4>{project.title || "Untitled build"}</h4>
-                <p>{project.shortDescription || "No description yet."}</p>
-              </button>
+              <div key={project.id} className="studio-build-row">
+                <button
+                  type="button"
+                  className={`studio-build-card${selectedProject?.id === project.id && view === "build" ? " studio-build-card-active" : ""}`}
+                  onClick={() => {
+                    setSelectedProjectId(project.id);
+                    setView("build");
+                  }}
+                >
+                  <div className="studio-build-card-top">
+                    <span>{project.primaryType || "Build"}</span>
+                  </div>
+                  <h4>{project.title || "Untitled build"}</h4>
+                  <p>{project.shortDescription || "No description yet."}</p>
+                </button>
+                <button type="button" className="studio-build-delete" onClick={() => deleteBuild(project.id)}>
+                  Delete
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -833,7 +810,6 @@ export default function BuilderSetup({
           <BuildEditor
             project={selectedProject}
             onUpdateProjectField={onUpdateProjectField}
-            onToggleFeatured={onToggleFeatured}
           />
         )}
       </div>

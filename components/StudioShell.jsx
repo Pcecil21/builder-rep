@@ -111,12 +111,10 @@ export default function StudioShell({
     }));
   };
 
-  const toggleFeatured = (projectId) => {
+  const deleteProject = (projectId) => {
     updateBuilder((current) => ({
       ...current,
-      projects: current.projects.map((project) =>
-        project.id === projectId ? { ...project, featured: !project.featured } : project,
-      ),
+      projects: current.projects.filter((project) => project.id !== projectId),
     }));
   };
 
@@ -129,6 +127,7 @@ export default function StudioShell({
         {
           id,
           ...projectDraft,
+          featured: true,
           designNotes: projectDraft.designNotes ?? [],
           supportingLinks: projectDraft.supportingLinks ?? [],
           visuals: projectDraft.visuals ?? [],
@@ -270,8 +269,8 @@ export default function StudioShell({
           builder={builder}
           onUpdateBuilderField={updateBuilderField}
           onUpdateListField={updateListField}
-          onToggleFeatured={toggleFeatured}
           onCreateProject={createProject}
+          onDeleteProject={deleteProject}
           onUpdateProjectField={updateProjectField}
         />
       </div>

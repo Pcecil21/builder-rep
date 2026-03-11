@@ -35,13 +35,13 @@ function buildViewerEntries(builder, payload) {
     entries.push({
       role: "object",
       objectType: "showcase",
-      data: {
-        projectIds:
-          payload.projectIds?.length
-            ? payload.projectIds
-            : builder.projects.filter((project) => project.featured).map((project) => project.id),
-      },
-    });
+        data: {
+          projectIds:
+            payload.projectIds?.length
+              ? payload.projectIds
+              : builder.projects.map((project) => project.id),
+        },
+      });
   }
 
   if (payload.intent === "project-detail" && payload.projectIds?.[0]) {

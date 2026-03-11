@@ -616,6 +616,13 @@ a {
   margin-top: 14px;
 }
 
+.studio-build-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
 .studio-build-card {
   width: 100%;
   padding: 14px;
@@ -654,6 +661,19 @@ a {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.studio-build-delete {
+  align-self: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 10px 12px;
+  cursor: pointer;
 }
 
 .studio-content {
@@ -731,7 +751,7 @@ a {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 14px;
+  margin: 18px 0 14px;
 }
 
 .studio-subsection-head strong {
@@ -743,6 +763,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-top: 8px;
 }
 
 .studio-link-card {
@@ -2128,6 +2149,17 @@ a {
   .review-form,
   .portfolio-browse-grid {
     grid-template-columns: 1fr;
+  }
+
+  .builder-workspace,
+  .studio-build-row,
+  .studio-visual-grid,
+  .studio-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-build-delete {
+    justify-self: start;
   }
 
   .builder-review {

@@ -26,7 +26,7 @@ function findProject(builder, text) {
 }
 
 function getFeaturedProjects(builder) {
-  return builder.projects.filter((project) => project.featured);
+  return builder.projects;
 }
 
 function getProjectsByTag(builder, matcher) {
