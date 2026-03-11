@@ -85,16 +85,15 @@ function getNextBuildQuestion(build) {
   return BUILD_QUESTIONS[2];
 }
 
-function buildDraft(kind) {
-  const isAgent = kind === "agent";
-  const title = isAgent ? "New Agent" : "New Project";
+function buildDraft() {
+  const title = "New Build";
 
   return {
-    kind,
-    primaryType: isAgent ? "Agent" : "",
+    kind: "project",
+    primaryType: "",
     focusAreas: [],
     title,
-    category: isAgent ? "agent" : "public app",
+    category: "public app",
     shortDescription: "",
     longDescription: "",
     problem: "",
@@ -525,19 +524,17 @@ function BuildEditor({ project, onUpdateProjectField, onToggleFeatured }) {
         <div className="studio-panel-head">
           <div className="review-section-label">Build Editor</div>
           <h2>Add your first build</h2>
-          <p>Start with an agent or a project, then fill in the facts before you talk to Chuckie about it.</p>
+          <p>Start with the build itself, then fill in the facts before you talk to Chuckie about it.</p>
         </div>
       </div>
     );
   }
 
-  const kindLabel = project.kind === "agent" ? "Agent" : "Project";
-
   return (
     <div className="studio-panel">
       <div className="studio-panel-head">
-        <div className="review-section-label">{kindLabel}</div>
-        <h2>{project.title || `Untitled ${kindLabel}`}</h2>
+        <div className="review-section-label">Build</div>
+        <h2>{project.title || "Untitled Build"}</h2>
         <p>Enter the raw material first. Chuckie can sharpen the framing after the basics are in place.</p>
       </div>
 
@@ -547,13 +544,8 @@ function BuildEditor({ project, onUpdateProjectField, onToggleFeatured }) {
           <input
             value={project.title}
             onChange={(event) => onUpdateProjectField(project.id, "title", event.target.value)}
-            placeholder={project.kind === "agent" ? "Holmes" : "Sponsor Dashboard"}
+            placeholder="Holmes, Sponsor Dashboard, Chuckie Team Radar"
           />
-        </label>
-
-        <label>
-          Kind
-          <input value={kindLabel} disabled />
         </label>
 
         <label className="studio-form-wide">
@@ -754,8 +746,8 @@ export default function BuilderSetup({
     builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null,
   );
 
-  const addBuild = (kind) => {
-    const projectId = onCreateProject(buildDraft(kind));
+  const addBuild = () => {
+    const projectId = onCreateProject(buildDraft());
     setSelectedProjectId(projectId);
     setView("build");
   };
@@ -794,11 +786,8 @@ export default function BuilderSetup({
         <div className="studio-sidebar-section">
           <div className="studio-sidebar-label">Builds</div>
           <div className="studio-add-row">
-            <button type="button" className="ghost-button" onClick={() => addBuild("agent")}>
-              Add Agent
-            </button>
-            <button type="button" className="ghost-button" onClick={() => addBuild("project")}>
-              Add Project
+            <button type="button" className="ghost-button" onClick={addBuild}>
+              Add Agent/Project
             </button>
           </div>
 
@@ -814,7 +803,7 @@ export default function BuilderSetup({
                 }}
               >
                 <div className="studio-build-card-top">
-                  <span>{project.kind === "agent" ? "Agent" : "Project"}</span>
+                  <span>{project.primaryType || "Build"}</span>
                   {project.featured ? <strong>Featured</strong> : null}
                 </div>
                 <h4>{project.title || "Untitled build"}</h4>
