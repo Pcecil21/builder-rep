@@ -433,8 +433,8 @@ function ScreenshotUploader({ project, onUpdateProjectField }) {
 function PrimaryTypePicker({ project, onUpdateProjectField }) {
   return (
     <div className="studio-section-block">
-      <div className="review-section-label">Primary Type</div>
-      <p className="review-subcopy">Use the wider taxonomy here. The public portfolio radar will derive its narrower categories automatically.</p>
+      <div className="review-section-label">Build Type</div>
+      <p className="review-subcopy">Pick the closest match for what this build is.</p>
       <div className="taxonomy-grid">
         {PRIMARY_TYPES.map((type) => {
           const active = project.primaryType === type.id;
@@ -466,8 +466,8 @@ function FocusAreaPicker({ project, onUpdateProjectField }) {
 
   return (
     <div className="studio-section-block">
-      <div className="review-section-label">What does this build primarily do?</div>
-      <p className="review-subcopy">Select up to three if you want to keep the taxonomy tight, but the form allows more.</p>
+      <div className="review-section-label">What It Does</div>
+      <p className="review-subcopy">Choose up to three that best describe the work.</p>
       <div className="focus-area-grid">
         {FOCUS_AREAS.map((area) => {
           const active = project.focusAreas.includes(area.id);
