@@ -938,6 +938,10 @@ a {
   line-height: 1.6;
 }
 
+.studio-chat-start-row {
+  margin-top: 22px;
+}
+
 .main-area {
   flex: 1;
   overflow-y: auto;

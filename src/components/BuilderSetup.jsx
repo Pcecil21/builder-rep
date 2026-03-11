@@ -527,6 +527,7 @@ function ChuckieRefinePanel({
 }) {
   const [target, setTarget] = useState("profile");
   const [selectedBuildId, setSelectedBuildId] = useState(selectedProject?.id ?? builder.projects[0]?.id ?? "");
+  const [started, setStarted] = useState(false);
   const [input, setInput] = useState("");
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -542,6 +543,7 @@ function ChuckieRefinePanel({
     setHistory([]);
     setInput("");
     setError("");
+    setStarted(false);
   }, [target, selectedBuildId]);
 
   const activeProject = getProjectEditorShape(
@@ -563,9 +565,26 @@ function ChuckieRefinePanel({
     return `${current}\n\n${addition}`;
   };
 
+  const startConversation = () => {
+    if (target === "build" && !activeProject) {
+      return;
+    }
+
+    setStarted(true);
+    setHistory([
+      {
+        role: "assistant",
+        text:
+          target === "profile"
+            ? "I'm ready. Tell me anything you want me to understand better about your background, how you work, or how you want to be represented."
+            : `I'm ready. Tell me anything you want me to understand better about ${activeProject.title}.`,
+      },
+    ]);
+  };
+
   const submit = async () => {
     const trimmed = input.trim();
-    if (!trimmed || loading || (target === "build" && !activeProject)) {
+    if (!trimmed || loading || !started || (target === "build" && !activeProject)) {
       return;
     }
 
@@ -655,55 +674,66 @@ function ChuckieRefinePanel({
         </div>
       ) : null}
 
-      <div className="studio-chat-surface">
-        {history.length ? (
-          <div className="builder-conversation">
-            {history.map((entry, index) =>
-              entry.role === "user" ? (
-                <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
-                  <p>{entry.text}</p>
-                </div>
-              ) : (
-                <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
-                  <div className="builder-avatar">◎</div>
-                  <p>{entry.text}</p>
-                </div>
-              ),
-            )}
-            {loading ? (
-              <div className="builder-line builder-line-chuckie">
-                <div className="builder-avatar">◎</div>
-                <p>Thinking...</p>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="studio-chat-empty">Start the conversation.</div>
-        )}
-      </div>
-
-      <div className="builder-composer">
-        <textarea
-          rows="4"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={
-            target === "profile"
-              ? "Tell Chuckie more about your background, how you work, or how you want to be represented."
-              : "Tell Chuckie more about this build, why it matters, or what people should understand."
-          }
-        />
-        <div className="builder-composer-actions">
+      {!started ? (
+        <div className="builder-composer-actions studio-chat-start-row">
           <button
             type="button"
             className="solid-button builder-send-button"
-            onClick={submit}
-            disabled={!input.trim() || loading || (target === "build" && !activeProject)}
+            onClick={startConversation}
+            disabled={target === "build" && !activeProject}
           >
-            {loading ? "Talking..." : "Talk to Chuckie"}
+            Talk to Chuckie
           </button>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="studio-chat-surface">
+            <div className="builder-conversation">
+              {history.map((entry, index) =>
+                entry.role === "user" ? (
+                  <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
+                    <p>{entry.text}</p>
+                  </div>
+                ) : (
+                  <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
+                    <div className="builder-avatar">◎</div>
+                    <p>{entry.text}</p>
+                  </div>
+                ),
+              )}
+              {loading ? (
+                <div className="builder-line builder-line-chuckie">
+                  <div className="builder-avatar">◎</div>
+                  <p>Thinking...</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="builder-composer">
+            <textarea
+              rows="4"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder={
+                target === "profile"
+                  ? "Tell Chuckie more about your background, how you work, or how you want to be represented."
+                  : "Tell Chuckie more about this build, why it matters, or what people should understand."
+              }
+            />
+            <div className="builder-composer-actions">
+              <button
+                type="button"
+                className="solid-button builder-send-button"
+                onClick={submit}
+                disabled={!input.trim() || loading || (target === "build" && !activeProject)}
+              >
+                {loading ? "Sending..." : "Send"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {error ? <div className="studio-error">{error}</div> : null}
     </div>
