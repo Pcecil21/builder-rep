@@ -118,6 +118,52 @@ function buildDraft(kind) {
   };
 }
 
+function getProjectEditorShape(project) {
+  if (!project) {
+    return null;
+  }
+
+  return {
+    ...project,
+    kind: project.kind === "agent" ? "agent" : "project",
+    primaryType: typeof project.primaryType === "string" ? project.primaryType : "",
+    focusAreas: Array.isArray(project.focusAreas) ? project.focusAreas : [],
+    buildType: typeof project.buildType === "string" ? project.buildType : "",
+    capabilities: Array.isArray(project.capabilities) ? project.capabilities : [],
+    primaryLink:
+      project.primaryLink && typeof project.primaryLink === "object"
+        ? {
+            type: typeof project.primaryLink.type === "string" ? project.primaryLink.type : "website",
+            title: typeof project.primaryLink.title === "string" ? project.primaryLink.title : "",
+            url: typeof project.primaryLink.url === "string" ? project.primaryLink.url : "",
+            description:
+              typeof project.primaryLink.description === "string" ? project.primaryLink.description : "",
+          }
+        : {
+            type: "website",
+            title: "",
+            url: "",
+            description: "",
+          },
+    supportingLinks: Array.isArray(project.supportingLinks)
+      ? project.supportingLinks.map((link) => ({
+          type: typeof link?.type === "string" ? link.type : "website",
+          title: typeof link?.title === "string" ? link.title : "",
+          url: typeof link?.url === "string" ? link.url : "",
+          description: typeof link?.description === "string" ? link.description : "",
+        }))
+      : [],
+    visuals: Array.isArray(project.visuals)
+      ? project.visuals.map((visual) => ({
+          title: typeof visual?.title === "string" ? visual.title : "",
+          description: typeof visual?.description === "string" ? visual.description : "",
+          url: typeof visual?.url === "string" ? visual.url : "",
+          path: typeof visual?.path === "string" ? visual.path : "",
+        }))
+      : [],
+  };
+}
+
 function BuilderProfileEditor({ builder, onUpdateBuilderField, onUpdateListField }) {
   return (
     <div className="studio-panel">
@@ -704,8 +750,9 @@ export default function BuilderSetup({
   const [view, setView] = useState("profile");
   const [selectedProjectId, setSelectedProjectId] = useState(builder.projects[0]?.id ?? null);
 
-  const selectedProject =
-    builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null;
+  const selectedProject = getProjectEditorShape(
+    builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null,
+  );
 
   const addBuild = (kind) => {
     const projectId = onCreateProject(buildDraft(kind));
