@@ -166,9 +166,9 @@ function BuilderProfileEditor({ builder, onUpdateBuilderField, onUpdateListField
   return (
     <div className="studio-panel">
       <div className="studio-panel-head">
-        <div className="review-section-label">About You</div>
-        <h2>Set the core builder framing first</h2>
-        <p>This is the stable context Chuckie should know before he starts helping shape the individual builds.</p>
+        <div className="review-section-label">Background</div>
+        <h2>What do you want people to know about you</h2>
+        <p>This is the background Chuckie should know when he's presenting your work to the world.</p>
       </div>
 
       <div className="studio-form-grid">
@@ -746,11 +746,12 @@ export default function BuilderSetup({
       <aside className="studio-sidebar">
         <div className="studio-sidebar-head">
           <div className="landing-eyebrow">Builder Studio</div>
-          <strong>Build your Agent Representative (Rep) from facts first</strong>
+          <strong>Build Your Agent Rep</strong>
           <span>{buildCountLabel}</span>
         </div>
 
         <div className="studio-sidebar-section">
+          <div className="studio-sidebar-label">Background</div>
           <button
             type="button"
             className={`studio-nav-button${view === "profile" ? " studio-nav-button-active" : ""}`}
