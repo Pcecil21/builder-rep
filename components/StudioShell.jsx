@@ -107,7 +107,19 @@ export default function StudioShell({
     updateBuilder((current) => ({
       ...current,
       projects: current.projects.map((project) =>
-        project.id === projectId ? { ...project, [field]: value } : project,
+        project.id === projectId
+          ? {
+              ...project,
+              [field]: value,
+              ...(field === "buildProfileType"
+                ? {
+                    buildType: value,
+                    kind: value === "Agent" ? "agent" : "project",
+                    primaryType: value,
+                  }
+                : {}),
+            }
+          : project,
       ),
     }));
   };

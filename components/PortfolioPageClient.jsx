@@ -57,14 +57,19 @@ export default function PortfolioPageClient({ builder, slug }) {
             <p>{builder.shortBio}</p>
             <div className="portfolio-meta-row">
               <span>{builder.projects.length} public projects</span>
-              <span>{mappedProjects.length} mapped into the ecosystem radar</span>
+              <span>{mappedProjects.length} tagged into the capability marker map</span>
               <Link href={`/rep/${slug}`} className="portfolio-inline-link">
                 Open Chuckie chat
               </Link>
             </div>
           </div>
 
-          <BuilderEcosystem builder={builder} slug={slug} onOpenProject={openProjectDetails} />
+          <BuilderEcosystem
+            builder={builder}
+            slug={slug}
+            mode="capability-markers"
+            onOpenProject={openProjectDetails}
+          />
         </section>
 
         <section className="portfolio-projects">

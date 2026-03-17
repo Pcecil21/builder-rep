@@ -6,6 +6,7 @@ import {
   getAxisById,
   getPortfolioPathForSlug,
   getRadarProjects,
+  getVisibleCapabilities,
   RADAR_AXES,
   RADAR_BUILD_TYPE_STYLES,
 } from "@/lib/radar";
@@ -19,14 +20,16 @@ function countToPercent(count) {
 }
 
 function toBuild(project) {
+  const capabilities = getVisibleCapabilities(project);
+
   return {
     id: project.id,
     name: project.title,
     type: project.buildType,
     desc: project.shortDescription,
     detail: project.longDescription || project.whatItIs || project.whyItMatters,
-    capabilities: project.capabilities,
-    mini: getAxisById(project.capabilities[0])?.icon ?? "◎",
+    capabilities,
+    mini: getAxisById(capabilities[0])?.icon ?? "◎",
   };
 }
 
@@ -143,7 +146,7 @@ function Radar({ builds, highlightedAxes, onHoverAxis, size = 260 }) {
 }
 
 function BuildPill({ build, highlighted, onHover, onSelect }) {
-  const typeStyle = RADAR_BUILD_TYPE_STYLES[build.type];
+  const typeStyle = RADAR_BUILD_TYPE_STYLES[build.type] ?? RADAR_BUILD_TYPE_STYLES.Agent;
 
   return (
     <button
@@ -165,13 +168,13 @@ function BuildPill({ build, highlighted, onHover, onSelect }) {
         <div className="ecosystem-build-name">{build.name}</div>
         <div className="ecosystem-build-desc">{build.desc}</div>
       </div>
-      <span className="ecosystem-build-type">{build.type.toUpperCase()}</span>
+      <span className="ecosystem-build-type">{build.type}</span>
     </button>
   );
 }
 
 function BuildDetail({ build, surface, slug, onClose, onOpenProject }) {
-  const typeStyle = RADAR_BUILD_TYPE_STYLES[build.type];
+  const typeStyle = RADAR_BUILD_TYPE_STYLES[build.type] ?? RADAR_BUILD_TYPE_STYLES.Agent;
 
   return (
     <div className="ecosystem-build-detail" style={{ "--ecosystem-detail-border": typeStyle.border }}>
@@ -190,16 +193,24 @@ function BuildDetail({ build, surface, slug, onClose, onOpenProject }) {
 
       <div className="ecosystem-build-detail-copy">{build.detail}</div>
 
-      <div className="ecosystem-capability-row">
-        {build.capabilities.map((capabilityId) => {
-          const axis = getAxisById(capabilityId);
-          return (
-            <span key={capabilityId} className="ecosystem-capability-tag">
-              {axis?.icon} {axis?.short}
-            </span>
-          );
-        })}
-      </div>
+      {build.capabilities.length ? (
+        <div className="ecosystem-capability-row">
+          {build.capabilities.map((capabilityId) => {
+            const axis = getAxisById(capabilityId);
+            return (
+              <span key={capabilityId} className="ecosystem-capability-tag">
+                {axis?.icon} {axis?.short}
+              </span>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="ecosystem-capability-empty">
+          {build.type === "Agent"
+            ? "No capability markers tagged yet."
+            : "Capability markers only appear on agent builds."}
+        </div>
+      )}
 
       <div className="ecosystem-build-detail-actions">
         {surface === "chat" ? (
@@ -216,7 +227,26 @@ function BuildDetail({ build, surface, slug, onClose, onOpenProject }) {
   );
 }
 
-export default function BuilderEcosystem({ builder, slug, surface = "portfolio", onOpenProject }) {
+const MODE_META = {
+  "capability-markers": {
+    kicker: "Capability Marker Map",
+    emptyTitle: "No mapped builds yet",
+    emptyCopy:
+      "Tag a project with a build type to make the portfolio map appear. Agent builds can then be tagged with capability markers.",
+    subtitle: (buildCount, coveredCount) =>
+      `${buildCount} typed ${buildCount === 1 ? "build" : "builds"} across ${coveredCount} capability markers`,
+    insightEmpty: "No capability markers tagged yet. Agent builds will shape this map once markers are selected.",
+  },
+};
+
+export default function BuilderEcosystem({
+  builder,
+  slug,
+  surface = "portfolio",
+  onOpenProject,
+  mode = "capability-markers",
+}) {
+  const modeMeta = MODE_META[mode] ?? MODE_META["capability-markers"];
   const builds = useMemo(() => getRadarProjects(builder).map(toBuild), [builder]);
   const [hoveredBuildId, setHoveredBuildId] = useState(null);
   const [hoveredAxis, setHoveredAxis] = useState(null);
@@ -261,9 +291,9 @@ export default function BuilderEcosystem({ builder, slug, surface = "portfolio",
     return (
       <div className={`ecosystem-card ecosystem-card-${surface}`}>
         <div className="ecosystem-empty">
-          <div className="ecosystem-kicker">Builder Ecosystem</div>
-          <h2>No mapped builds yet</h2>
-          <p>Tag a project with a build type and capability axes in Builder Studio to make the ecosystem view appear.</p>
+          <div className="ecosystem-kicker">{modeMeta.kicker}</div>
+          <h2>{modeMeta.emptyTitle}</h2>
+          <p>{modeMeta.emptyCopy}</p>
         </div>
         <style jsx>{baseStyles}</style>
       </div>
@@ -275,11 +305,9 @@ export default function BuilderEcosystem({ builder, slug, surface = "portfolio",
       <div className={`ecosystem-card ecosystem-card-${surface}`}>
         <div className="ecosystem-header">
           <div>
-            <div className="ecosystem-kicker">Builder Ecosystem</div>
+            <div className="ecosystem-kicker">{modeMeta.kicker}</div>
             <div className="ecosystem-title">{builder.displayName}'s Portfolio Map</div>
-            <div className="ecosystem-subtitle">
-              {builds.length} mapped builds across {coveredAxes.length} capability areas
-            </div>
+            <div className="ecosystem-subtitle">{modeMeta.subtitle(builds.length, coveredAxes.length)}</div>
           </div>
           <div className="ecosystem-stat-row">
             {[
@@ -332,7 +360,7 @@ export default function BuilderEcosystem({ builder, slug, surface = "portfolio",
           <div className="ecosystem-type-bar">
             {types.map((type) => {
               const count = builds.filter((build) => build.type === type).length;
-              const typeStyle = RADAR_BUILD_TYPE_STYLES[type];
+              const typeStyle = RADAR_BUILD_TYPE_STYLES[type] ?? RADAR_BUILD_TYPE_STYLES.Agent;
               return (
                 <div
                   key={type}
@@ -346,7 +374,7 @@ export default function BuilderEcosystem({ builder, slug, surface = "portfolio",
           <div className="ecosystem-type-legend">
             {types.map((type) => {
               const count = builds.filter((build) => build.type === type).length;
-              const typeStyle = RADAR_BUILD_TYPE_STYLES[type];
+              const typeStyle = RADAR_BUILD_TYPE_STYLES[type] ?? RADAR_BUILD_TYPE_STYLES.Agent;
               return (
                 <div key={type} className="ecosystem-type-item">
                   <span className="ecosystem-type-dot" style={{ background: typeStyle.text }} />
@@ -359,18 +387,24 @@ export default function BuilderEcosystem({ builder, slug, surface = "portfolio",
         </div>
 
         <div className="ecosystem-insight">
-          <div className="ecosystem-insight-copy">
-            <strong>Goes deepest in </strong>
-            {topAxes.map((axis, index) => (
-              <span key={axis.id}>
-                <span className="ecosystem-axis-inline">
-                  {axis.icon} {axis.short}
+          {topAxes.length ? (
+            <div className="ecosystem-insight-copy">
+              <strong>Goes deepest in </strong>
+              {topAxes.map((axis, index) => (
+                <span key={axis.id}>
+                  <span className="ecosystem-axis-inline">
+                    {axis.icon} {axis.short}
+                  </span>
+                  <span className="ecosystem-axis-inline-count"> ({axis.count})</span>
+                  {index < topAxes.length - 1 ? (index === topAxes.length - 2 ? " and " : ", ") : ""}
                 </span>
-                <span className="ecosystem-axis-inline-count"> ({axis.count})</span>
-                {index < topAxes.length - 1 ? (index === topAxes.length - 2 ? " and " : ", ") : ""}
-              </span>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="ecosystem-insight-copy">
+              <strong>{modeMeta.insightEmpty}</strong>
+            </div>
+          )}
           {uncoveredAxes.length ? (
             <div className="ecosystem-uncovered">
               Not yet covered: {uncoveredAxes.map((axis) => `${axis.icon} ${axis.short}`).join(", ")}
@@ -609,9 +643,10 @@ const baseStyles = `
     border: 1px solid var(--ecosystem-pill-type-border);
     padding: 2px 7px;
     border-radius: 4px;
-    white-space: nowrap;
     flex-shrink: 0;
     letter-spacing: 0.04em;
+    line-height: 1.25;
+    text-align: center;
   }
 
   .ecosystem-build-detail {
@@ -679,6 +714,12 @@ const baseStyles = `
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
+  }
+
+  .ecosystem-capability-empty {
+    font-size: 11px;
+    color: #8a8698;
+    line-height: 1.5;
   }
 
   .ecosystem-capability-tag {

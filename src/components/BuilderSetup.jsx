@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FOCUS_AREAS, PRIMARY_TYPES } from "@/lib/build-taxonomy";
+import { BUILD_TYPES, CAPABILITY_MARKERS, FOCUS_AREAS } from "@/lib/build-taxonomy";
 import { requestStudioTurn } from "../lib/api";
 
 function buildDraft() {
@@ -10,6 +10,8 @@ function buildDraft() {
   return {
     kind: "project",
     primaryType: "",
+    buildProfileType: "",
+    buildType: "",
     focusAreas: [],
     title,
     category: "public app",
@@ -45,10 +47,28 @@ function getProjectEditorShape(project) {
   return {
     ...project,
     kind: project.kind === "agent" ? "agent" : "project",
-    primaryType: typeof project.primaryType === "string" ? project.primaryType : "",
+    primaryType:
+      typeof project.primaryType === "string"
+        ? project.primaryType
+        : typeof project.buildProfileType === "string"
+          ? project.buildProfileType
+          : typeof project.buildType === "string"
+            ? project.buildType
+            : "",
+    buildProfileType:
+      typeof project.buildProfileType === "string"
+        ? project.buildProfileType
+        : typeof project.buildType === "string"
+          ? project.buildType
+          : "",
+    buildType:
+      typeof project.buildType === "string"
+        ? project.buildType
+        : typeof project.buildProfileType === "string"
+          ? project.buildProfileType
+          : "",
     focusAreas: Array.isArray(project.focusAreas) ? project.focusAreas : [],
     whatChuckieKnows: typeof project.whatChuckieKnows === "string" ? project.whatChuckieKnows : "",
-    buildType: typeof project.buildType === "string" ? project.buildType : "",
     capabilities: Array.isArray(project.capabilities) ? project.capabilities : [],
     primaryLink:
       project.primaryLink && typeof project.primaryLink === "object"
@@ -361,20 +381,22 @@ function ScreenshotUploader({ project, onUpdateProjectField }) {
   );
 }
 
-function PrimaryTypePicker({ project, onUpdateProjectField }) {
+function BuildTypePicker({ project, onUpdateProjectField }) {
+  const currentBuildType = project.buildProfileType || project.buildType || "";
+
   return (
     <div className="studio-section-block">
       <div className="review-section-label">Build Type</div>
       <p className="review-subcopy">Pick the closest match for what this build is.</p>
       <div className="taxonomy-grid">
-        {PRIMARY_TYPES.map((type) => {
-          const active = project.primaryType === type.id;
+        {BUILD_TYPES.map((type) => {
+          const active = currentBuildType === type.id;
           return (
             <button
               key={type.id}
               type="button"
               className={`taxonomy-pill${active ? " taxonomy-pill-active" : ""}`}
-              onClick={() => onUpdateProjectField(project.id, "primaryType", type.id)}
+              onClick={() => onUpdateProjectField(project.id, "buildProfileType", type.id)}
             >
               <span>{type.icon}</span>
               <strong>{type.label}</strong>
@@ -388,6 +410,10 @@ function PrimaryTypePicker({ project, onUpdateProjectField }) {
 
 function FocusAreaPicker({ project, onUpdateProjectField }) {
   const toggleFocusArea = (focusAreaId) => {
+    if (!project.focusAreas.includes(focusAreaId) && project.focusAreas.length >= 3) {
+      return;
+    }
+
     const nextFocusAreas = project.focusAreas.includes(focusAreaId)
       ? project.focusAreas.filter((item) => item !== focusAreaId)
       : [...project.focusAreas, focusAreaId];
@@ -398,19 +424,58 @@ function FocusAreaPicker({ project, onUpdateProjectField }) {
   return (
     <div className="studio-section-block">
       <div className="review-section-label">What It Does</div>
-      <p className="review-subcopy">Choose up to three that best describe the work.</p>
+      <p className="review-subcopy">
+        Choose up to three that best describe the work. {project.focusAreas.length}/3 selected.
+      </p>
       <div className="focus-area-grid">
         {FOCUS_AREAS.map((area) => {
           const active = project.focusAreas.includes(area.id);
+          const disabled = !active && project.focusAreas.length >= 3;
           return (
             <button
               key={area.id}
               type="button"
               className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
+              disabled={disabled}
               onClick={() => toggleFocusArea(area.id)}
             >
               <span>{area.icon}</span>
               <strong>{area.label}</strong>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CapabilityMarkerPicker({ project, onUpdateProjectField }) {
+  const toggleCapabilityMarker = (markerId) => {
+    const nextCapabilities = project.capabilities.includes(markerId)
+      ? project.capabilities.filter((item) => item !== markerId)
+      : [...project.capabilities, markerId];
+
+    onUpdateProjectField(project.id, "capabilities", nextCapabilities);
+  };
+
+  return (
+    <div className="studio-section-block">
+      <div className="review-section-label">Capability Markers</div>
+      <p className="review-subcopy">
+        Tag the builder skills this agent build demonstrates. You can choose as many as apply.
+      </p>
+      <div className="focus-area-grid">
+        {CAPABILITY_MARKERS.map((marker) => {
+          const active = project.capabilities.includes(marker.id);
+          return (
+            <button
+              key={marker.id}
+              type="button"
+              className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
+              onClick={() => toggleCapabilityMarker(marker.id)}
+            >
+              <span>{marker.icon}</span>
+              <strong>{marker.label}</strong>
             </button>
           );
         })}
@@ -485,8 +550,11 @@ function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
         </label>
       </div>
 
-      <PrimaryTypePicker project={project} onUpdateProjectField={onUpdateProjectField} />
+      <BuildTypePicker project={project} onUpdateProjectField={onUpdateProjectField} />
       <FocusAreaPicker project={project} onUpdateProjectField={onUpdateProjectField} />
+      {project.buildType === "Agent" || project.buildProfileType === "Agent" ? (
+        <CapabilityMarkerPicker project={project} onUpdateProjectField={onUpdateProjectField} />
+      ) : null}
       <LinkListEditor project={project} onUpdateProjectField={onUpdateProjectField} />
       <ScreenshotUploader project={project} onUpdateProjectField={onUpdateProjectField} />
 
@@ -823,7 +891,7 @@ export default function BuilderSetup({
                 }}
               >
                 <div className="studio-build-card-top">
-                  <span>{project.primaryType || "Build"}</span>
+                  <span>{project.buildType || project.buildProfileType || "Build"}</span>
                 </div>
                 <h4>{project.title || "Untitled build"}</h4>
                 <p>{project.shortDescription || "No description yet."}</p>
