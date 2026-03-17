@@ -450,7 +450,13 @@ function FocusAreaPicker({ project, onUpdateProjectField }) {
 }
 
 function CapabilityMarkerPicker({ project, onUpdateProjectField }) {
+  const isAgentBuild = project.buildType === "Agent" || project.buildProfileType === "Agent";
+
   const toggleCapabilityMarker = (markerId) => {
+    if (!isAgentBuild) {
+      return;
+    }
+
     const nextCapabilities = project.capabilities.includes(markerId)
       ? project.capabilities.filter((item) => item !== markerId)
       : [...project.capabilities, markerId];
@@ -462,24 +468,41 @@ function CapabilityMarkerPicker({ project, onUpdateProjectField }) {
     <div className="studio-section-block">
       <div className="review-section-label">Capability Markers</div>
       <p className="review-subcopy">
-        Tag the builder skills this agent build demonstrates. You can choose as many as apply.
+        {isAgentBuild
+          ? `Tag the builder skills this agent build demonstrates. ${project.capabilities.length} selected.`
+          : "Capability markers apply to Agent builds. Select Agent above to enable them."}
       </p>
-      <div className="focus-area-grid">
-        {CAPABILITY_MARKERS.map((marker) => {
-          const active = project.capabilities.includes(marker.id);
-          return (
-            <button
-              key={marker.id}
-              type="button"
-              className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
-              onClick={() => toggleCapabilityMarker(marker.id)}
-            >
-              <span>{marker.icon}</span>
-              <strong>{marker.label}</strong>
-            </button>
-          );
-        })}
-      </div>
+      {isAgentBuild ? (
+        <div className="focus-area-grid">
+          {CAPABILITY_MARKERS.map((marker) => {
+            const active = project.capabilities.includes(marker.id);
+            return (
+              <button
+                key={marker.id}
+                type="button"
+                className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
+                onClick={() => toggleCapabilityMarker(marker.id)}
+              >
+                <span>{marker.icon}</span>
+                <strong>{marker.label}</strong>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="studio-derived-card">
+          <div className="review-subcopy">
+            This tagging layer feeds the capability-marker portfolio map and only turns on for Agent
+            builds.
+          </div>
+          {project.capabilities.length ? (
+            <div className="review-subcopy">
+              This build already has saved capability markers. They will reappear if you switch back
+              to Agent.
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -552,9 +575,7 @@ function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
 
       <BuildTypePicker project={project} onUpdateProjectField={onUpdateProjectField} />
       <FocusAreaPicker project={project} onUpdateProjectField={onUpdateProjectField} />
-      {project.buildType === "Agent" || project.buildProfileType === "Agent" ? (
-        <CapabilityMarkerPicker project={project} onUpdateProjectField={onUpdateProjectField} />
-      ) : null}
+      <CapabilityMarkerPicker project={project} onUpdateProjectField={onUpdateProjectField} />
       <LinkListEditor project={project} onUpdateProjectField={onUpdateProjectField} />
       <ScreenshotUploader project={project} onUpdateProjectField={onUpdateProjectField} />
 

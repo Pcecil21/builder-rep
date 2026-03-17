@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import BuilderSetup from "@/src/components/BuilderSetup";
+import { syncBuilderFromProfile } from "@/lib/builder-profile";
+import BuilderStudio from "@/src/components/BuilderStudio";
 import { slugify } from "@/lib/slug";
 
 function formatPublishedAt(value) {
@@ -18,14 +19,15 @@ export default function StudioShell({
   initialShareUrl,
   initialPublishedAt,
 }) {
-  const [builder, setBuilder] = useState(initialBuilder);
+  const [builder, setBuilder] = useState(() => syncBuilderFromProfile(initialBuilder));
   const [shareUrl, setShareUrl] = useState(initialShareUrl);
   const [publishedAt, setPublishedAt] = useState(initialPublishedAt);
   const [saveState, setSaveState] = useState("saved");
   const [saveError, setSaveError] = useState("");
   const [publishPending, setPublishPending] = useState(false);
   const saveTimeoutRef = useRef(null);
-  const latestBuilderRef = useRef(initialBuilder);
+  const latestBuilderRef = useRef(syncBuilderFromProfile(initialBuilder));
+  const saveRequestIdRef = useRef(0);
 
   const publishLabel = useMemo(
     () =>
@@ -34,6 +36,8 @@ export default function StudioShell({
   );
 
   const persistBuilder = async (nextBuilder) => {
+    const requestId = saveRequestIdRef.current + 1;
+    saveRequestIdRef.current = requestId;
     setSaveState("saving");
     setSaveError("");
 
@@ -49,13 +53,22 @@ export default function StudioShell({
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (requestId !== saveRequestIdRef.current) {
+          return true;
+        }
+
         setSaveState("error");
         setSaveError(payload.error || "Unable to save studio changes.");
         return false;
       }
 
-      latestBuilderRef.current = payload.builder;
-      setBuilder(payload.builder);
+      const syncedBuilder = syncBuilderFromProfile(payload.builder);
+      if (requestId !== saveRequestIdRef.current) {
+        return true;
+      }
+
+      latestBuilderRef.current = syncedBuilder;
+      setBuilder(syncedBuilder);
       setSaveState("saved");
       if (payload.shareUrl) {
         setShareUrl(payload.shareUrl);
@@ -65,6 +78,10 @@ export default function StudioShell({
       }
       return true;
     } catch {
+      if (requestId !== saveRequestIdRef.current) {
+        return true;
+      }
+
       setSaveState("error");
       setSaveError("Unable to save studio changes.");
       return false;
@@ -83,7 +100,9 @@ export default function StudioShell({
 
   const updateBuilder = (updater) => {
     setBuilder((current) => {
-      const nextBuilder = typeof updater === "function" ? updater(current) : updater;
+      const nextBuilder = syncBuilderFromProfile(
+        typeof updater === "function" ? updater(current) : updater,
+      );
       scheduleSave(nextBuilder);
       return nextBuilder;
     });
@@ -177,8 +196,9 @@ export default function StudioShell({
       setShareUrl(payload.shareUrl);
       setPublishedAt(payload.publishedAt);
       if (payload.builder) {
-        setBuilder(payload.builder);
-        latestBuilderRef.current = payload.builder;
+        const syncedBuilder = syncBuilderFromProfile(payload.builder);
+        setBuilder(syncedBuilder);
+        latestBuilderRef.current = syncedBuilder;
       }
     } catch {
       setSaveError("Unable to publish your agent representative.");
@@ -223,12 +243,8 @@ export default function StudioShell({
           </label>
 
           <label className="studio-meta-wide">
-            Short Bio
-            <textarea
-              rows="2"
-              value={builder.shortBio}
-              onChange={(event) => updateBuilderField("shortBio", event.target.value)}
-            />
+            Live Public Bio
+            <textarea rows="2" value={builder.shortBio} readOnly />
           </label>
         </div>
 
@@ -278,10 +294,9 @@ export default function StudioShell({
       </div>
 
       <div className="builder-frame">
-        <BuilderSetup
+        <BuilderStudio
           builder={builder}
-          onUpdateBuilderField={updateBuilderField}
-          onUpdateListField={updateListField}
+          onUpdateBuilder={updateBuilder}
           onCreateProject={createProject}
           onDeleteProject={deleteProject}
           onUpdateProjectField={updateProjectField}

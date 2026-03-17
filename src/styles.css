@@ -603,6 +603,7 @@ a {
   display: flex;
   gap: 10px;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .studio-add-row .ghost-button {
@@ -614,6 +615,11 @@ a {
   flex-direction: column;
   gap: 10px;
   margin-top: 14px;
+}
+
+.studio-build-list-inline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .studio-build-card {
@@ -663,6 +669,35 @@ a {
 .studio-panel {
   border-radius: 28px;
   padding: 26px;
+}
+
+.studio-shell-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border: 1px solid rgba(226, 226, 220, 0.92);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.studio-shell-tab {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.studio-shell-tab-active {
+  border-color: rgba(40, 116, 166, 0.2);
+  background: rgba(40, 116, 166, 0.08);
+  color: var(--text);
 }
 
 .studio-panel-head h2 {
@@ -2223,6 +2258,15 @@ a {
   .builder-layout {
     display: block;
     min-height: 0;
+  }
+
+  .studio-shell-tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .studio-shell-tab {
+    flex: 1;
   }
 
   .builder-stepper {

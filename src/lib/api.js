@@ -23,11 +23,18 @@ export async function requestViewerTurn({ slug, history, userText }) {
   });
 }
 
-export async function requestStudioTurn({ history, userText, stage, currentProject }) {
+export async function requestStudioTurn({
+  history,
+  userText,
+  stage,
+  currentProject,
+  focusField,
+}) {
   return postJson("/api/studio/chat", {
     history,
     userText,
     stage,
     currentProject,
+    focusField,
   });
 }

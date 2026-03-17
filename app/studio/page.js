@@ -1,4 +1,5 @@
 import StudioShell from "@/components/StudioShell";
+import { BUILDER_SCHEMA_VERSION } from "@/lib/builder-profile";
 import { requirePageSession } from "@/lib/server/session-guards";
 import { getStore } from "@/lib/server/store";
 import { getShareUrlForSlug } from "@/lib/server/url";
@@ -11,6 +12,11 @@ export default async function StudioPage() {
 
   if (!record) {
     record = await store.createBuilderForUser({
+      userId: current.user.id,
+      email: current.user.email,
+    });
+  } else if (record.draft.schemaVersion !== BUILDER_SCHEMA_VERSION) {
+    record = await store.resetBuilderForUser({
       userId: current.user.id,
       email: current.user.email,
     });
