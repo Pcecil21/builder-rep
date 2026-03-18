@@ -384,8 +384,8 @@ function InterviewPanel({
             <div className="review-section-label">Chat Interview</div>
             <h2>Talk to Chuckie</h2>
             <p>
-              Chuckie should learn through the conversation, keep track of what it knows, and keep
-              asking where the picture is still thin.
+              Start the conversation and Chuckie will keep building a clearer picture of who you
+              are and what you make.
             </p>
           </div>
 
@@ -408,7 +408,7 @@ function InterviewPanel({
           rows="4"
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
-          placeholder="Talk to Chuckie. It should ask the next best question, not hand you another form."
+          placeholder="Tell Chuckie what's top of mind, or answer its last question."
         />
         <div className="builder-composer-actions">
           <button type="button" className="solid-button builder-send-button" onClick={onSubmit} disabled={!input.trim() || loading}>

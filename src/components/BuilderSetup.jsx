@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BUILD_TYPES, CAPABILITY_MARKERS, FOCUS_AREAS } from "@/lib/build-taxonomy";
-import { requestStudioTurn } from "../lib/api";
 
 function buildDraft() {
   const title = "New Build";
@@ -102,65 +101,6 @@ function getProjectEditorShape(project) {
         }))
       : [],
   };
-}
-
-function BuilderProfileEditor({ builder, onUpdateBuilderField, onUpdateListField }) {
-  return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Background</div>
-        <h2>What do you want people to know about you</h2>
-        <p>This is the background Chuckie should know when he's presenting your work to the world.</p>
-      </div>
-
-      <div className="studio-form-grid">
-        <label className="studio-form-wide">
-          What Chuckie says first
-          <textarea
-            rows="3"
-            value={builder.featuredIntroLine}
-            onChange={(event) => onUpdateBuilderField("featuredIntroLine", event.target.value)}
-          />
-        </label>
-
-        <label className="studio-form-wide">
-          Longer intro
-          <textarea
-            rows="4"
-            value={builder.longerIntro}
-            onChange={(event) => onUpdateBuilderField("longerIntro", event.target.value)}
-          />
-        </label>
-
-        <label className="studio-form-wide">
-          Themes
-          <input
-            value={builder.themes.join(", ")}
-            onChange={(event) =>
-              onUpdateListField(
-                "themes",
-                event.target.value
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              )
-            }
-            placeholder="Agent systems, orchestration, AI-native product design"
-          />
-        </label>
-
-        <label className="studio-form-wide">
-          What Chuckie Knows
-          <textarea
-            rows="6"
-            value={builder.whatChuckieKnows}
-            onChange={(event) => onUpdateBuilderField("whatChuckieKnows", event.target.value)}
-            placeholder="Facts, context, judgment calls, and background Chuckie should keep in mind."
-          />
-        </label>
-      </div>
-    </div>
-  );
 }
 
 function LinkListEditor({ project, onUpdateProjectField }) {
@@ -608,227 +548,6 @@ function BuildEditor({ project, onDeleteProject, onUpdateProjectField }) {
   );
 }
 
-function ChuckieRefinePanel({
-  builder,
-  selectedProject,
-  onUpdateBuilderField,
-  onUpdateProjectField,
-}) {
-  const [target, setTarget] = useState("profile");
-  const [selectedBuildId, setSelectedBuildId] = useState(selectedProject?.id ?? builder.projects[0]?.id ?? "");
-  const [started, setStarted] = useState(false);
-  const [input, setInput] = useState("");
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!selectedBuildId && (selectedProject?.id || builder.projects[0]?.id)) {
-      setSelectedBuildId(selectedProject?.id ?? builder.projects[0]?.id ?? "");
-    }
-  }, [builder.projects, selectedBuildId, selectedProject?.id]);
-
-  useEffect(() => {
-    setHistory([]);
-    setInput("");
-    setError("");
-    setStarted(false);
-  }, [target, selectedBuildId]);
-
-  const activeProject = getProjectEditorShape(
-    builder.projects.find((project) => project.id === selectedBuildId) ?? selectedProject ?? null,
-  );
-
-  const appendKnowledge = (existing, nextNote) => {
-    const current = typeof existing === "string" ? existing.trim() : "";
-    const addition = typeof nextNote === "string" ? nextNote.trim() : "";
-
-    if (!addition) {
-      return current;
-    }
-
-    if (!current) {
-      return addition;
-    }
-
-    return `${current}\n\n${addition}`;
-  };
-
-  const startConversation = () => {
-    if (target === "build" && !activeProject) {
-      return;
-    }
-
-    setStarted(true);
-    setHistory([
-      {
-        role: "assistant",
-        text:
-          target === "profile"
-            ? "I'm ready. Tell me anything you want me to understand better about your background, how you work, or how you want to be represented."
-            : `I'm ready. Tell me anything you want me to understand better about ${activeProject.title}.`,
-      },
-    ]);
-  };
-
-  const submit = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || loading || !started || (target === "build" && !activeProject)) {
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setInput("");
-    setHistory((current) => [...current, { role: "user", text: trimmed }]);
-
-    try {
-      const response = await requestStudioTurn({
-        history,
-        userText: trimmed,
-        stage: target === "profile" ? "profile-refine" : "build-refine",
-        currentProject: target === "build" ? activeProject : null,
-      });
-
-      if (target === "profile") {
-        onUpdateBuilderField(
-          "whatChuckieKnows",
-          appendKnowledge(builder.whatChuckieKnows, response.knowledgeNote),
-        );
-      } else if (activeProject) {
-        onUpdateProjectField(
-          activeProject.id,
-          "whatChuckieKnows",
-          appendKnowledge(activeProject.whatChuckieKnows, response.knowledgeNote),
-        );
-      }
-
-      setHistory((current) => [
-        ...current,
-        { role: "assistant", text: response.reply || "Captured." },
-      ]);
-    } catch (submitError) {
-      setHistory((current) => current.slice(0, -1));
-      setInput(trimmed);
-      setError(submitError instanceof Error ? submitError.message : "Unable to talk to Chuckie right now.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Talk to Chuckie</div>
-        <h2>Talk to Chuckie</h2>
-        <p>Choose whether this conversation is about your background or one of your builds.</p>
-      </div>
-
-      <div className="studio-toggle-row">
-        <button
-          type="button"
-          className={`taxonomy-pill${target === "profile" ? " taxonomy-pill-active" : ""}`}
-          onClick={() => setTarget("profile")}
-        >
-          <span>◎</span>
-          <strong>My Background</strong>
-        </button>
-        <button
-          type="button"
-          className={`taxonomy-pill${target === "build" ? " taxonomy-pill-active" : ""}`}
-          onClick={() => activeProject && setTarget("build")}
-          disabled={!activeProject}
-        >
-          <span>◧</span>
-          <strong>My Agents/Projects</strong>
-        </button>
-      </div>
-
-      {target === "build" ? (
-        <div className="studio-form-grid">
-          <label className="studio-form-wide">
-            Which build?
-            <select
-              className="review-select"
-              value={activeProject?.id ?? ""}
-              onChange={(event) => setSelectedBuildId(event.target.value)}
-            >
-              {builder.projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title || "Untitled build"}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      ) : null}
-
-      {!started ? (
-        <div className="builder-composer-actions studio-chat-start-row">
-          <button
-            type="button"
-            className="solid-button builder-send-button"
-            onClick={startConversation}
-            disabled={target === "build" && !activeProject}
-          >
-            Talk to Chuckie
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="studio-chat-surface">
-            <div className="builder-conversation">
-              {history.map((entry, index) =>
-                entry.role === "user" ? (
-                  <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
-                    <p>{entry.text}</p>
-                  </div>
-                ) : (
-                  <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
-                    <div className="builder-avatar">◎</div>
-                    <p>{entry.text}</p>
-                  </div>
-                ),
-              )}
-              {loading ? (
-                <div className="builder-line builder-line-chuckie">
-                  <div className="builder-avatar">◎</div>
-                  <p>Thinking...</p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="builder-composer">
-            <textarea
-              rows="4"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder={
-                target === "profile"
-                  ? "Tell Chuckie more about your background, how you work, or how you want to be represented."
-                  : "Tell Chuckie more about this build, why it matters, or what people should understand."
-              }
-            />
-            <div className="builder-composer-actions">
-              <button
-                type="button"
-                className="solid-button builder-send-button"
-                onClick={submit}
-                disabled={!input.trim() || loading || (target === "build" && !activeProject)}
-              >
-                {loading ? "Sending..." : "Send"}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {error ? <div className="studio-error">{error}</div> : null}
-    </div>
-  );
-}
-
 export default function BuilderSetup({
   builder,
   onUpdateBuilderField,
@@ -837,7 +556,6 @@ export default function BuilderSetup({
   onDeleteProject = () => {},
   onUpdateProjectField,
 }) {
-  const [view, setView] = useState("profile");
   const [selectedProjectId, setSelectedProjectId] = useState(builder.projects[0]?.id ?? null);
 
   const selectedProject = getProjectEditorShape(
@@ -847,7 +565,6 @@ export default function BuilderSetup({
   const addBuild = () => {
     const projectId = onCreateProject(buildDraft());
     setSelectedProjectId(projectId);
-    setView("build");
   };
 
   const deleteBuild = (projectId) => {
@@ -856,7 +573,6 @@ export default function BuilderSetup({
 
     if (selectedProjectId === projectId) {
       setSelectedProjectId(remainingProjects[0]?.id ?? null);
-      setView(remainingProjects.length ? "build" : "profile");
     }
   };
 
@@ -870,23 +586,12 @@ export default function BuilderSetup({
       <aside className="studio-sidebar">
         <div className="studio-sidebar-head">
           <div className="landing-eyebrow">Builder Studio</div>
-          <strong>Build Your Agent Rep</strong>
+          <strong>Projects</strong>
           <span>{buildCountLabel}</span>
         </div>
 
         <div className="studio-sidebar-section">
-          <div className="studio-sidebar-label">Background</div>
-          <button
-            type="button"
-            className={`studio-nav-button${view === "profile" ? " studio-nav-button-active" : ""}`}
-            onClick={() => setView("profile")}
-          >
-            About You
-          </button>
-        </div>
-
-        <div className="studio-sidebar-section">
-          <div className="studio-sidebar-label">Builds</div>
+          <div className="studio-sidebar-label">Projects</div>
           <div className="studio-add-row">
             <button type="button" className="ghost-button" onClick={addBuild}>
               Add Agent/Project
@@ -898,11 +603,8 @@ export default function BuilderSetup({
               <button
                 key={project.id}
                 type="button"
-                className={`studio-build-card${selectedProject?.id === project.id && view === "build" ? " studio-build-card-active" : ""}`}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  setView("build");
-                }}
+                className={`studio-build-card${selectedProject?.id === project.id ? " studio-build-card-active" : ""}`}
+                onClick={() => setSelectedProjectId(project.id)}
               >
                 <div className="studio-build-card-top">
                   <span>{project.buildType || project.buildProfileType || "Build"}</span>
@@ -916,19 +618,11 @@ export default function BuilderSetup({
       </aside>
 
       <div className="studio-content">
-        {view === "profile" ? (
-          <BuilderProfileEditor
-            builder={builder}
-            onUpdateBuilderField={onUpdateBuilderField}
-            onUpdateListField={onUpdateListField}
-          />
-        ) : (
-          <BuildEditor
-            project={selectedProject}
-            onDeleteProject={deleteBuild}
-            onUpdateProjectField={onUpdateProjectField}
-          />
-        )}
+        <BuildEditor
+          project={selectedProject}
+          onDeleteProject={deleteBuild}
+          onUpdateProjectField={onUpdateProjectField}
+        />
       </div>
     </div>
   );
