@@ -1,21 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BUILD_TYPES, CAPABILITY_MARKERS, FOCUS_AREAS } from "@/lib/build-taxonomy";
+import BuilderSetup from "@/src/components/BuilderSetup";
 import {
   buildInterviewQuestion,
-  buildKnowledgeGapPrompts,
-  canEnterStudio,
-  countAnsweredProfileFields,
-  isBasicsComplete,
-  isStudioReady,
+  buildInterviewRecap,
+  buildProjectInterviewQuestion,
+  buildReturningInterviewQuestion,
+  getNextInterviewField,
+  hasInterviewSignal,
   PROFILE_FIELD_LABELS,
   PROFILE_FIELD_ORDER,
   TOOL_OPTIONS,
 } from "@/lib/builder-profile";
 import { requestStudioTurn } from "@/src/lib/api";
 
-function buildDraft() {
+function buildProjectSeed() {
   const title = "New Build";
 
   return {
@@ -98,22 +98,40 @@ function getProjectEditorShape(project) {
             url: "",
             description: "",
           },
-    supportingLinks: Array.isArray(project.supportingLinks)
-      ? project.supportingLinks.map((link) => ({
-          type: typeof link?.type === "string" ? link.type : "website",
-          title: typeof link?.title === "string" ? link.title : "",
-          url: typeof link?.url === "string" ? link.url : "",
-          description: typeof link?.description === "string" ? link.description : "",
-        }))
-      : [],
-    visuals: Array.isArray(project.visuals)
-      ? project.visuals.map((visual) => ({
-          title: typeof visual?.title === "string" ? visual.title : "",
-          description: typeof visual?.description === "string" ? visual.description : "",
-          url: typeof visual?.url === "string" ? visual.url : "",
-          path: typeof visual?.path === "string" ? visual.path : "",
-        }))
-      : [],
+  };
+}
+
+function buildProjectFromCapture(projectDraft, userText) {
+  const base = buildProjectSeed();
+  const title = typeof projectDraft?.title === "string" && projectDraft.title.trim() ? projectDraft.title.trim() : base.title;
+
+  return {
+    ...base,
+    title,
+    category: typeof projectDraft?.category === "string" ? projectDraft.category : base.category,
+    shortDescription:
+      typeof projectDraft?.shortDescription === "string" ? projectDraft.shortDescription : base.shortDescription,
+    longDescription:
+      typeof projectDraft?.longDescription === "string" ? projectDraft.longDescription : base.longDescription,
+    problem: typeof projectDraft?.problem === "string" ? projectDraft.problem : base.problem,
+    whatItIs: typeof projectDraft?.whatItIs === "string" ? projectDraft.whatItIs : base.whatItIs,
+    whyItMatters:
+      typeof projectDraft?.whyItMatters === "string" ? projectDraft.whyItMatters : base.whyItMatters,
+    whatItDemonstrates:
+      typeof projectDraft?.whatItDemonstrates === "string"
+        ? projectDraft.whatItDemonstrates
+        : base.whatItDemonstrates,
+    whyBuiltThisWay:
+      typeof projectDraft?.whyBuiltThisWay === "string" ? projectDraft.whyBuiltThisWay : base.whyBuiltThisWay,
+    status: typeof projectDraft?.status === "string" ? projectDraft.status : base.status,
+    featured: typeof projectDraft?.featured === "boolean" ? projectDraft.featured : base.featured,
+    tags: Array.isArray(projectDraft?.tags) ? projectDraft.tags : base.tags,
+    whatChuckieKnows: typeof userText === "string" ? userText.trim() : "",
+    primaryLink: {
+      ...base.primaryLink,
+      title: `Open ${title}`,
+      url: typeof projectDraft?.primaryLinkUrl === "string" ? projectDraft.primaryLinkUrl : "",
+    },
   };
 }
 
@@ -130,6 +148,15 @@ function appendKnowledge(existing, nextNote) {
   }
 
   return `${current}\n\n${addition}`;
+}
+
+function buildChatHistory(entries) {
+  return entries
+    .filter((entry) => (entry.role === "user" || entry.role === "assistant") && entry.kind !== "recap")
+    .map((entry) => ({
+      role: entry.role,
+      text: entry.text,
+    }));
 }
 
 function ToolBucket({ title, helper, selected, onToggle }) {
@@ -156,72 +183,87 @@ function ToolBucket({ title, helper, selected, onToggle }) {
   );
 }
 
-function BasicsStep({
-  builder,
-  onToggleTool,
-  onGithubProfileChange,
-  onGithubReposChange,
-  onContinue,
-}) {
+function StarterCards({ hasSignal, onStartInterview, onUpdateWhatChuckieKnows, onStartWithBuild, onOpenStudio }) {
   return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Step 1</div>
-        <h2>Structured Basics</h2>
-        <p>Give Chuckie enough context to open with smarter questions instead of generic prompts.</p>
-      </div>
+    <div className="interview-starter-grid">
+      <button type="button" className="interview-starter-card" onClick={onStartInterview}>
+        <strong>{hasSignal ? "Keep the interview going" : "Start my interview"}</strong>
+        <span>{hasSignal ? "Keep teaching Chuckie through the chat." : "Let Chuckie start learning about you."}</span>
+      </button>
 
-      <ToolBucket
-        title="Tools You Use Regularly"
-        helper="Pick the tools that are actually in your working stack right now."
-        selected={builder.toolStack.regular}
-        onToggle={(tool) => onToggleTool("regular", tool)}
-      />
+      <button type="button" className="interview-starter-card" onClick={onStartWithBuild}>
+        <strong>Start with a build</strong>
+        <span>Lead with the first project Chuckie should understand.</span>
+      </button>
 
-      <ToolBucket
-        title="Tools You're Familiar With"
-        helper="Use this for tools you can work with, even if they are not core to your current stack."
-        selected={builder.toolStack.familiar}
-        onToggle={(tool) => onToggleTool("familiar", tool)}
-      />
+      <button
+        type="button"
+        className="interview-starter-card"
+        onClick={onUpdateWhatChuckieKnows}
+        disabled={!hasSignal}
+      >
+        <strong>Update what you know</strong>
+        <span>See Chuckie's current picture, then tell it what changed.</span>
+      </button>
 
-      <div className="studio-section-block">
-        <div className="review-section-label">GitHub Context</div>
-        <p className="review-subcopy">
-          First pass: paste your GitHub profile and any repos Chuckie should know about now.
-        </p>
-        <div className="studio-form-grid">
-          <label className="studio-form-wide">
-            GitHub Profile URL
-            <input
-              value={builder.github.profileUrl}
-              onChange={(event) => onGithubProfileChange(event.target.value)}
-              placeholder="https://github.com/your-handle"
-            />
-          </label>
+      <button type="button" className="interview-starter-card" onClick={onOpenStudio}>
+        <strong>Open studio</strong>
+        <span>Jump to the structured editor when you want manual control.</span>
+      </button>
+    </div>
+  );
+}
 
-          <label className="studio-form-wide">
-            Repo URLs to Start With
-            <textarea
-              rows="4"
-              value={builder.github.repoUrls.join("\n")}
-              onChange={(event) => onGithubReposChange(event.target.value)}
-              placeholder={"https://github.com/you/project-one\nhttps://github.com/you/project-two"}
-            />
-          </label>
-        </div>
-      </div>
+function RecapCard({ recap }) {
+  return (
+    <div className="interview-recap-card">
+      <div className="review-section-label">What Chuckie Knows</div>
+      <h3>{recap.headline}</h3>
+      {recap.bullets.length ? (
+        <ol className="interview-recap-list">
+          {recap.bullets.map((bullet) => (
+            <li key={bullet}>{bullet}</li>
+          ))}
+        </ol>
+      ) : (
+        <p>Not much yet. Start the interview and Chuckie will build the picture through the conversation.</p>
+      )}
+    </div>
+  );
+}
 
-      <div className="builder-composer-actions">
-        <button type="button" className="solid-button builder-send-button" onClick={onContinue}>
-          Continue to Interview
-        </button>
+function ChatThread({ history, loading }) {
+  return (
+    <div className="studio-chat-surface interview-thread">
+      <div className="builder-conversation">
+        {history.map((entry, index) =>
+          entry.kind === "recap" ? (
+            <RecapCard key={`recap-${index}`} recap={entry.recap} />
+          ) : entry.role === "user" ? (
+            <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
+              <p>{entry.text}</p>
+            </div>
+          ) : (
+            <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
+              <div className="builder-avatar">◎</div>
+              <p>{entry.text}</p>
+            </div>
+          ),
+        )}
+        {loading ? (
+          <div className="builder-line builder-line-chuckie">
+            <div className="builder-avatar">◎</div>
+            <p>Thinking...</p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function ProfileSnapshot({ builder, onUpdateBuilder }) {
+function KnowledgePanel({ builder, onUpdateBuilder, onToggleTool }) {
+  const recap = useMemo(() => buildInterviewRecap(builder), [builder]);
+
   const updateProfileField = (field, value) => {
     onUpdateBuilder((current) => ({
       ...current,
@@ -233,974 +275,143 @@ function ProfileSnapshot({ builder, onUpdateBuilder }) {
   };
 
   return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Profile Preview</div>
-        <h2>Live Builder Profile</h2>
-        <p>Chuckie updates this as you work. You can review and edit it anytime.</p>
-      </div>
+    <div className="interview-stack">
+      <RecapCard recap={recap} />
 
-      <div className="studio-derived-card">
-        <div className="studio-derived-row studio-derived-row-stack">
-          <span>Live Public Intro</span>
-          <strong>{builder.featuredIntroLine}</strong>
-        </div>
-        <div className="studio-derived-row studio-derived-row-stack">
-          <span>Public Bio</span>
-          <strong>{builder.shortBio}</strong>
-        </div>
-        <div className="studio-derived-row studio-derived-row-stack">
-          <span>Regular Tools</span>
-          <div className="studio-derived-tags">
-            {builder.toolStack.regular.length ? (
-              builder.toolStack.regular.map((tool) => <strong key={tool}>{tool}</strong>)
-            ) : (
-              <span>Still empty.</span>
-            )}
-          </div>
-        </div>
-        {builder.github.profileUrl ? (
-          <div className="studio-derived-row studio-derived-row-stack">
-            <span>GitHub</span>
-            <strong>{builder.github.profileUrl}</strong>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="studio-form-grid">
-        {PROFILE_FIELD_ORDER.map((field) => (
-          <label key={field} className="studio-form-wide">
-            {PROFILE_FIELD_LABELS[field]}
-            <textarea
-              rows={field === "builderPhilosophy" || field === "background" ? 4 : 3}
-              value={builder.profile[field]}
-              onChange={(event) => updateProfileField(field, event.target.value)}
-              placeholder={`Add ${PROFILE_FIELD_LABELS[field].toLowerCase()}.`}
-            />
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InterviewStep({ builder, onUpdateBuilder, onSkipToProjects, onEnterStudio }) {
-  const [input, setInput] = useState("");
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [focusField, setFocusField] = useState(PROFILE_FIELD_ORDER[0]);
-
-  const answeredCount = countAnsweredProfileFields(builder.profile);
-
-  useEffect(() => {
-    const nextField = PROFILE_FIELD_ORDER.find((field) => !builder.profile[field]) ?? PROFILE_FIELD_ORDER[0];
-    setFocusField((current) => (builder.profile[current] ? nextField : current || nextField));
-  }, [builder.profile]);
-
-  useEffect(() => {
-    if (!history.length && isBasicsComplete(builder)) {
-      const nextField = PROFILE_FIELD_ORDER.find((field) => !builder.profile[field]) ?? PROFILE_FIELD_ORDER[0];
-      setFocusField(nextField);
-      setHistory([{ role: "assistant", text: buildInterviewQuestion(nextField, builder) }]);
-    }
-  }, [builder, history.length]);
-
-  const selectFocusField = (field) => {
-    setFocusField(field);
-    setHistory([{ role: "assistant", text: buildInterviewQuestion(field, builder) }]);
-    setError("");
-    setInput("");
-  };
-
-  const submit = async () => {
-    const trimmed = input.trim();
-
-    if (!trimmed || loading) {
-      return;
-    }
-
-    const activeField = focusField;
-    setLoading(true);
-    setError("");
-    setInput("");
-    setHistory((current) => [...current, { role: "user", text: trimmed }]);
-
-    try {
-      const response = await requestStudioTurn({
-        history,
-        userText: trimmed,
-        stage: "onboarding-interview",
-        focusField: activeField,
-      });
-
-      const nextField = response.nextFocusField || activeField;
-      const fieldToUpdate = response.profileField || activeField;
-
-      onUpdateBuilder((current) => ({
-        ...current,
-        profile: {
-          ...current.profile,
-          [fieldToUpdate]: response.fieldValue || trimmed,
-        },
-        onboarding: {
-          ...current.onboarding,
-          currentStep: "interview",
-          interviewResponses: Math.max(current.onboarding.interviewResponses, answeredCount + 1),
-        },
-      }));
-
-      setFocusField(nextField);
-      setHistory((current) => [...current, { role: "assistant", text: response.reply || "Captured." }]);
-    } catch (submitError) {
-      setHistory((current) => current.slice(0, -1));
-      setInput(trimmed);
-      setError(submitError instanceof Error ? submitError.message : "Unable to talk to Chuckie right now.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Step 2</div>
-        <h2>Adaptive Interview</h2>
-        <p>Chuckie is pulling signal out of your story and updating the profile in real time.</p>
-      </div>
-
-      <div className="studio-section-block">
-        <div className="review-section-label">Coverage</div>
-        <p className="review-subcopy">
-          {answeredCount}/{PROFILE_FIELD_ORDER.length} core areas captured so far.
-        </p>
-        <div className="focus-area-grid">
-          {PROFILE_FIELD_ORDER.map((field) => {
-            const answered = Boolean(builder.profile[field]);
-            const active = field === focusField;
-            return (
-              <button
-                key={field}
-                type="button"
-                className={`focus-area-pill${active || answered ? " focus-area-pill-active" : ""}`}
-                onClick={() => selectFocusField(field)}
-              >
-                <strong>{PROFILE_FIELD_LABELS[field]}</strong>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="studio-chat-surface">
-        <div className="builder-conversation">
-          {history.map((entry, index) =>
-            entry.role === "user" ? (
-              <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
-                <p>{entry.text}</p>
-              </div>
-            ) : (
-              <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
-                <div className="builder-avatar">◎</div>
-                <p>{entry.text}</p>
-              </div>
-            ),
-          )}
-          {loading ? (
-            <div className="builder-line builder-line-chuckie">
-              <div className="builder-avatar">◎</div>
-              <p>Thinking...</p>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="builder-composer">
-        <textarea
-          rows="4"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Answer in as much detail as you want. Chuckie will keep pulling on the interesting threads."
-        />
-        <div className="builder-composer-actions">
-          <button type="button" className="solid-button builder-send-button" onClick={submit} disabled={!input.trim() || loading}>
-            {loading ? "Sending..." : "Send"}
-          </button>
-        </div>
-      </div>
-
-      <div className="builder-composer-actions builder-composer-actions-split">
-        <button type="button" className="ghost-button" onClick={onSkipToProjects}>
-          Skip to Project Entry
-        </button>
-        {canEnterStudio(builder) ? (
-          <button type="button" className="solid-button builder-send-button" onClick={onEnterStudio}>
-            Enter Studio
-          </button>
-        ) : null}
-      </div>
-
-      {error ? <div className="studio-error">{error}</div> : null}
-    </div>
-  );
-}
-
-function LinkListEditor({ project, onUpdateProjectField }) {
-  const updatePrimaryLink = (field, value) => {
-    onUpdateProjectField(project.id, "primaryLink", {
-      ...project.primaryLink,
-      [field]: value,
-    });
-  };
-
-  const updateSupportingLink = (index, field, value) => {
-    const nextLinks = project.supportingLinks.map((link, linkIndex) =>
-      linkIndex === index ? { ...link, [field]: value } : link,
-    );
-
-    onUpdateProjectField(project.id, "supportingLinks", nextLinks);
-  };
-
-  const addSupportingLink = () => {
-    onUpdateProjectField(project.id, "supportingLinks", [
-      ...project.supportingLinks,
-      {
-        type: "website",
-        title: "",
-        url: "",
-        description: "",
-      },
-    ]);
-  };
-
-  const removeSupportingLink = (index) => {
-    onUpdateProjectField(
-      project.id,
-      "supportingLinks",
-      project.supportingLinks.filter((_, linkIndex) => linkIndex !== index),
-    );
-  };
-
-  return (
-    <div className="studio-section-block">
-      <div className="review-section-label">Links</div>
-      <div className="studio-form-grid">
-        <label>
-          What is this link?
-          <input
-            value={project.primaryLink.title}
-            onChange={(event) => updatePrimaryLink("title", event.target.value)}
-            placeholder="Open Holmes"
-          />
-        </label>
-
-        <label>
-          Link URL
-          <input
-            value={project.primaryLink.url}
-            onChange={(event) => updatePrimaryLink("url", event.target.value)}
-            placeholder="https://example.com"
-          />
-        </label>
-
-        <label className="studio-form-wide">
-          Description
-          <input
-            value={project.primaryLink.description}
-            onChange={(event) => updatePrimaryLink("description", event.target.value)}
-            placeholder="Best place to send someone first"
-          />
-        </label>
-      </div>
-
-      <div className="studio-subsection-head">
-        <strong>More links</strong>
-        <button type="button" className="ghost-button" onClick={addSupportingLink}>
-          Add another link
-        </button>
-      </div>
-
-      <div className="studio-link-stack">
-        {project.supportingLinks.map((link, index) => (
-          <div key={`${project.id}-supporting-${index}`} className="studio-link-card">
-            <div className="studio-form-grid">
-              <label>
-                What is this link?
-                <input
-                  value={link.title}
-                  onChange={(event) => updateSupportingLink(index, "title", event.target.value)}
-                />
-              </label>
-              <label>
-                Link URL
-                <input
-                  value={link.url}
-                  onChange={(event) => updateSupportingLink(index, "url", event.target.value)}
-                />
-              </label>
-              <label className="studio-form-wide">
-                Description
-                <input
-                  value={link.description}
-                  onChange={(event) => updateSupportingLink(index, "description", event.target.value)}
-                />
-              </label>
-            </div>
-            <button type="button" className="builder-review-link" onClick={() => removeSupportingLink(index)}>
-              Remove link
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ScreenshotUploader({ project, onUpdateProjectField }) {
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-
-  const uploadFiles = async (fileList) => {
-    if (!fileList?.length) {
-      return;
-    }
-
-    setUploading(true);
-    setUploadError("");
-
-    try {
-      const nextVisuals = [...project.visuals];
-
-      for (const file of Array.from(fileList)) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch("/api/studio/uploads", {
-          method: "POST",
-          body: formData,
-        });
-        const payload = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(payload.error || "Unable to upload screenshot.");
-        }
-
-        nextVisuals.push(payload.visual);
-      }
-
-      onUpdateProjectField(project.id, "visuals", nextVisuals);
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Unable to upload screenshot.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const updateVisual = (index, field, value) => {
-    onUpdateProjectField(
-      project.id,
-      "visuals",
-      project.visuals.map((visual, visualIndex) =>
-        visualIndex === index ? { ...visual, [field]: value } : visual,
-      ),
-    );
-  };
-
-  const removeVisual = (index) => {
-    onUpdateProjectField(
-      project.id,
-      "visuals",
-      project.visuals.filter((_, visualIndex) => visualIndex !== index),
-    );
-  };
-
-  return (
-    <div className="studio-section-block">
-      <div className="studio-subsection-head">
-        <div>
-          <div className="review-section-label">Screenshots</div>
-          <p className="review-subcopy">Add screenshots people should see.</p>
-        </div>
-        <label className="ghost-button studio-upload-button">
-          {uploading ? "Uploading..." : "Upload image"}
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            multiple
-            hidden
-            onChange={(event) => uploadFiles(event.target.files)}
-          />
-        </label>
-      </div>
-
-      {uploadError ? <div className="studio-error">{uploadError}</div> : null}
-
-      <div className="studio-visual-grid">
-        {project.visuals.map((visual, index) => (
-          <div key={`${project.id}-visual-${index}`} className="studio-visual-card">
-            {visual.url ? <img src={visual.url} alt={visual.title || "Uploaded screenshot"} /> : null}
-            <label>
-              What is shown?
-              <input
-                value={visual.title}
-                onChange={(event) => updateVisual(index, "title", event.target.value)}
-              />
-            </label>
-            <label>
-              Optional note
-              <input
-                value={visual.description}
-                onChange={(event) => updateVisual(index, "description", event.target.value)}
-              />
-            </label>
-            <button type="button" className="builder-review-link" onClick={() => removeVisual(index)}>
-              Delete image
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BuildTypePicker({ project, onUpdateProjectField }) {
-  const currentBuildType = project.buildProfileType || project.buildType || "";
-
-  return (
-    <div className="studio-section-block">
-      <div className="review-section-label">Build Type</div>
-      <p className="review-subcopy">Pick the closest match for what this build is.</p>
-      <div className="taxonomy-grid">
-        {BUILD_TYPES.map((type) => {
-          const active = currentBuildType === type.id;
-          return (
-            <button
-              key={type.id}
-              type="button"
-              className={`taxonomy-pill${active ? " taxonomy-pill-active" : ""}`}
-              onClick={() => onUpdateProjectField(project.id, "buildProfileType", type.id)}
-            >
-              <span>{type.icon}</span>
-              <strong>{type.label}</strong>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function FocusAreaPicker({ project, onUpdateProjectField }) {
-  const toggleFocusArea = (focusAreaId) => {
-    if (!project.focusAreas.includes(focusAreaId) && project.focusAreas.length >= 3) {
-      return;
-    }
-
-    const nextFocusAreas = project.focusAreas.includes(focusAreaId)
-      ? project.focusAreas.filter((item) => item !== focusAreaId)
-      : [...project.focusAreas, focusAreaId];
-
-    onUpdateProjectField(project.id, "focusAreas", nextFocusAreas);
-  };
-
-  return (
-    <div className="studio-section-block">
-      <div className="review-section-label">What It Does</div>
-      <p className="review-subcopy">
-        Choose up to three that best describe the work. {project.focusAreas.length}/3 selected.
-      </p>
-      <div className="focus-area-grid">
-        {FOCUS_AREAS.map((area) => {
-          const active = project.focusAreas.includes(area.id);
-          const disabled = !active && project.focusAreas.length >= 3;
-          return (
-            <button
-              key={area.id}
-              type="button"
-              className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
-              disabled={disabled}
-              onClick={() => toggleFocusArea(area.id)}
-            >
-              <span>{area.icon}</span>
-              <strong>{area.label}</strong>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function CapabilityMarkerPicker({ project, onUpdateProjectField }) {
-  const isAgentBuild = project.buildType === "Agent" || project.buildProfileType === "Agent";
-
-  const toggleCapabilityMarker = (markerId) => {
-    if (!isAgentBuild) {
-      return;
-    }
-
-    const nextCapabilities = project.capabilities.includes(markerId)
-      ? project.capabilities.filter((item) => item !== markerId)
-      : [...project.capabilities, markerId];
-
-    onUpdateProjectField(project.id, "capabilities", nextCapabilities);
-  };
-
-  return (
-    <div className="studio-section-block">
-      <div className="review-section-label">Capability Markers</div>
-      <p className="review-subcopy">
-        {isAgentBuild
-          ? `Tag the builder skills this agent build demonstrates. ${project.capabilities.length} selected.`
-          : "Capability markers apply to Agent builds. Select Agent above to enable them."}
-      </p>
-      {isAgentBuild ? (
-        <div className="focus-area-grid">
-          {CAPABILITY_MARKERS.map((marker) => {
-            const active = project.capabilities.includes(marker.id);
-            return (
-              <button
-                key={marker.id}
-                type="button"
-                className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
-                onClick={() => toggleCapabilityMarker(marker.id)}
-              >
-                <span>{marker.icon}</span>
-                <strong>{marker.label}</strong>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="studio-derived-card">
-          <div className="review-subcopy">
-            This tagging layer feeds the capability-marker portfolio map and only turns on for Agent builds.
-          </div>
-          {project.capabilities.length ? (
-            <div className="review-subcopy">
-              This build already has saved capability markers. They will reappear if you switch back to Agent.
-            </div>
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BuildEditor({ builder, project, onDeleteProject, onUpdateProjectField }) {
-  if (!project) {
-    return (
       <div className="studio-panel">
         <div className="studio-panel-head">
-          <div className="review-section-label">Build Editor</div>
-          <h2>Add your first build</h2>
-          <p>Use structured fields for the facts, then add the context Chuckie should remember.</p>
+          <div className="review-section-label">Structured Context</div>
+          <h2>Keep Chuckie Grounded</h2>
+          <p>Use this when you want to correct or anchor the profile outside the conversation.</p>
         </div>
-      </div>
-    );
-  }
 
-  const confirmDelete = () => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Delete this build? This permanently removes it from your Agent Representative.",
-      );
+        <ToolBucket
+          title="Tools You Use Regularly"
+          helper="These help Chuckie place how you actually build."
+          selected={builder.toolStack.regular}
+          onToggle={(tool) => onToggleTool("regular", tool)}
+        />
 
-      if (!confirmed) {
-        return;
-      }
-    }
+        <ToolBucket
+          title="Tools You're Familiar With"
+          helper="Use this for tools you can speak to even if they're not in the core stack."
+          selected={builder.toolStack.familiar}
+          onToggle={(tool) => onToggleTool("familiar", tool)}
+        />
 
-    onDeleteProject(project.id);
-  };
+        <div className="studio-section-block">
+          <div className="review-section-label">GitHub Context</div>
+          <div className="studio-form-grid">
+            <label className="studio-form-wide">
+              GitHub Profile URL
+              <input
+                value={builder.github.profileUrl}
+                onChange={(event) =>
+                  onUpdateBuilder((current) => ({
+                    ...current,
+                    github: {
+                      ...current.github,
+                      profileUrl: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="https://github.com/your-handle"
+              />
+            </label>
 
-  return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Build Entry</div>
-        <h2>{project.title || "Untitled Build"}</h2>
-        <p>Chuckie will get smarter from the form first, then from the context you add around it.</p>
-      </div>
-
-      <div className="studio-form-grid">
-        <label>
-          Name
-          <input
-            value={project.title}
-            onChange={(event) => onUpdateProjectField(project.id, "title", event.target.value)}
-            placeholder="Holmes, Sponsor Dashboard, Chuckie Team Radar"
-          />
-        </label>
-
-        <label>
-          GitHub Repo URL
-          <input
-            value={project.githubRepoUrl}
-            onChange={(event) => onUpdateProjectField(project.id, "githubRepoUrl", event.target.value)}
-            placeholder="https://github.com/you/project"
-          />
-        </label>
-
-        <label className="studio-form-wide">
-          Description
-          <textarea
-            rows="3"
-            value={project.shortDescription}
-            onChange={(event) => onUpdateProjectField(project.id, "shortDescription", event.target.value)}
-            placeholder="What it is in one clear line"
-          />
-        </label>
-
-        <label className="studio-form-wide">
-          More context
-          <textarea
-            rows="5"
-            value={project.longDescription}
-            onChange={(event) => onUpdateProjectField(project.id, "longDescription", event.target.value)}
-            placeholder="What the build does, where it lives, and what makes it interesting"
-          />
-        </label>
-      </div>
-
-      {builder.github.profileUrl ? (
-        <div className="studio-derived-card">
-          <div className="studio-derived-row studio-derived-row-stack">
-            <span>Connected GitHub Profile</span>
-            <strong>{builder.github.profileUrl}</strong>
+            <label className="studio-form-wide">
+              Repo URLs to Start With
+              <textarea
+                rows="4"
+                value={builder.github.repoUrls.join("\n")}
+                onChange={(event) =>
+                  onUpdateBuilder((current) => ({
+                    ...current,
+                    github: {
+                      ...current.github,
+                      repoUrls: event.target.value
+                        .split("\n")
+                        .map((item) => item.trim())
+                        .filter(Boolean),
+                    },
+                  }))
+                }
+                placeholder={"https://github.com/you/project-one\nhttps://github.com/you/project-two"}
+              />
+            </label>
           </div>
         </div>
-      ) : null}
 
-      <BuildTypePicker project={project} onUpdateProjectField={onUpdateProjectField} />
-      <FocusAreaPicker project={project} onUpdateProjectField={onUpdateProjectField} />
-      <CapabilityMarkerPicker project={project} onUpdateProjectField={onUpdateProjectField} />
-      <LinkListEditor project={project} onUpdateProjectField={onUpdateProjectField} />
-      <ScreenshotUploader project={project} onUpdateProjectField={onUpdateProjectField} />
-
-      <div className="studio-section-block">
-        <div className="review-section-label">Tell Chuckie More About This Build</div>
-        <p className="review-subcopy">
-          Use this for the context the form will never ask for: why it mattered, what was hard, what you would do differently.
-        </p>
         <div className="studio-form-grid">
-          <label className="studio-form-wide">
-            Context for Chuckie
-            <textarea
-              rows="6"
-              value={project.whatChuckieKnows}
-              onChange={(event) => onUpdateProjectField(project.id, "whatChuckieKnows", event.target.value)}
-              placeholder="What should Chuckie remember when someone asks about this project later?"
-            />
-          </label>
+          {PROFILE_FIELD_ORDER.map((field) => (
+            <label key={field} className="studio-form-wide">
+              {PROFILE_FIELD_LABELS[field]}
+              <textarea
+                rows={field === "background" || field === "builderPhilosophy" ? 4 : 3}
+                value={builder.profile[field]}
+                onChange={(event) => updateProfileField(field, event.target.value)}
+                placeholder={`Add ${PROFILE_FIELD_LABELS[field].toLowerCase()}.`}
+              />
+            </label>
+          ))}
         </div>
-      </div>
-
-      <div className="studio-section-block studio-danger-zone">
-        <div className="review-section-label">Delete This Build</div>
-        <p className="review-subcopy studio-danger-copy">
-          This permanently removes this build from your Agent Representative. This action is final.
-        </p>
-        <button type="button" className="ghost-button studio-danger-button" onClick={confirmDelete}>
-          Delete build
-        </button>
       </div>
     </div>
   );
 }
 
-function BuildCollection({
+function InterviewPanel({
   builder,
-  selectedProjectId,
-  setSelectedProjectId,
-  onCreateProject,
-  onDeleteProject,
-  onUpdateProjectField,
-  showEnterStudio = false,
-  onEnterStudio,
+  history,
+  input,
+  loading,
+  error,
+  onInputChange,
+  onSubmit,
+  onStartInterview,
+  onUpdateWhatChuckieKnows,
+  onStartWithBuild,
+  onOpenStudio,
 }) {
-  const selectedProject = getProjectEditorShape(
-    builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null,
-  );
-
-  const addBuild = () => {
-    const projectId = onCreateProject(buildDraft());
-    setSelectedProjectId(projectId);
-  };
+  const hasSignal = hasInterviewSignal(builder);
 
   return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Step 3</div>
-        <h2>Project / Build Entry</h2>
-        <p>Forms for the structured facts. Chuckie context for the interesting stuff.</p>
-      </div>
-
-      <div className="studio-add-row">
-        <button type="button" className="ghost-button" onClick={addBuild}>
-          Add Build
-        </button>
-        {showEnterStudio ? (
-          <button type="button" className="solid-button builder-send-button" onClick={onEnterStudio}>
-            Enter Studio
-          </button>
-        ) : null}
-      </div>
-
-      {builder.projects.length ? (
-        <>
-          <div className="studio-build-list studio-build-list-inline">
-            {builder.projects.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                className={`studio-build-card${selectedProject?.id === project.id ? " studio-build-card-active" : ""}`}
-                onClick={() => setSelectedProjectId(project.id)}
-              >
-                <div className="studio-build-card-top">
-                  <span>{project.buildType || project.buildProfileType || "Build"}</span>
-                </div>
-                <h4>{project.title || "Untitled build"}</h4>
-                <p>{project.shortDescription || "No description yet."}</p>
-              </button>
-            ))}
+    <div className="interview-stack">
+      {!history.length ? (
+        <div className="studio-panel interview-hero">
+          <div className="interview-hero-mark">◎</div>
+          <div className="studio-panel-head">
+            <div className="review-section-label">Chat Interview</div>
+            <h2>Talk to Chuckie</h2>
+            <p>
+              Chuckie should learn through the conversation, keep track of what it knows, and keep
+              asking where the picture is still thin.
+            </p>
           </div>
 
-          <BuildEditor
-            builder={builder}
-            project={selectedProject}
-            onDeleteProject={onDeleteProject}
-            onUpdateProjectField={onUpdateProjectField}
+          {hasSignal ? <RecapCard recap={buildInterviewRecap(builder)} /> : null}
+
+          <StarterCards
+            hasSignal={hasSignal}
+            onStartInterview={onStartInterview}
+            onUpdateWhatChuckieKnows={onUpdateWhatChuckieKnows}
+            onStartWithBuild={onStartWithBuild}
+            onOpenStudio={onOpenStudio}
           />
-        </>
+        </div>
       ) : (
-        <div className="studio-derived-card">
-          <div className="studio-derived-row studio-derived-row-stack">
-            <span>Start with one build</span>
-            <strong>Add a project, tag it, and give Chuckie enough context to talk about it well.</strong>
-          </div>
-        </div>
+        <ChatThread history={history} loading={loading} />
       )}
-    </div>
-  );
-}
-
-function ChuckieStudioPanel({ builder, onUpdateBuilder, onUpdateProjectField }) {
-  const [target, setTarget] = useState("profile");
-  const [selectedBuildId, setSelectedBuildId] = useState(builder.projects[0]?.id ?? "");
-  const [activePromptId, setActivePromptId] = useState("");
-  const [history, setHistory] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const prompts = useMemo(() => buildKnowledgeGapPrompts(builder), [builder]);
-  const activeProject = getProjectEditorShape(
-    builder.projects.find((project) => project.id === selectedBuildId) ?? builder.projects[0] ?? null,
-  );
-
-  const filteredPrompts = prompts.filter((prompt) =>
-    target === "profile" ? prompt.target === "profile" : prompt.target === "build",
-  );
-
-  useEffect(() => {
-    if (!selectedBuildId && builder.projects[0]?.id) {
-      setSelectedBuildId(builder.projects[0].id);
-    }
-  }, [builder.projects, selectedBuildId]);
-
-  useEffect(() => {
-    const fallbackPrompt = filteredPrompts.find((prompt) =>
-      target === "build" ? prompt.projectId === (activeProject?.id ?? "") || !prompt.projectId : true,
-    );
-
-    if (!fallbackPrompt) {
-      setActivePromptId("");
-      setHistory([]);
-      return;
-    }
-
-    if (!filteredPrompts.some((prompt) => prompt.id === activePromptId)) {
-      setActivePromptId(fallbackPrompt.id);
-      setHistory([{ role: "assistant", text: fallbackPrompt.prompt }]);
-      setError("");
-    }
-  }, [activePromptId, activeProject?.id, filteredPrompts, target]);
-
-  const activatePrompt = (prompt) => {
-    setTarget(prompt.target === "build" ? "build" : "profile");
-    if (prompt.projectId) {
-      setSelectedBuildId(prompt.projectId);
-    }
-    setActivePromptId(prompt.id);
-    setHistory([{ role: "assistant", text: prompt.prompt }]);
-    setInput("");
-    setError("");
-  };
-
-  const submit = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || loading) {
-      return;
-    }
-
-    const activePrompt = prompts.find((prompt) => prompt.id === activePromptId) ?? null;
-    const currentTarget = activePrompt?.target ?? target;
-
-    setLoading(true);
-    setError("");
-    setInput("");
-    setHistory((current) => [...current, { role: "user", text: trimmed }]);
-
-    try {
-      if (currentTarget === "profile") {
-        const focusField = activePrompt?.focusField ?? PROFILE_FIELD_ORDER[0];
-        const response = await requestStudioTurn({
-          history,
-          userText: trimmed,
-          stage: "onboarding-interview",
-          focusField,
-        });
-
-        onUpdateBuilder((current) => ({
-          ...current,
-          profile: {
-            ...current.profile,
-            [response.profileField || focusField]: response.fieldValue || trimmed,
-          },
-          onboarding: {
-            ...current.onboarding,
-            interviewResponses: Math.max(current.onboarding.interviewResponses, countAnsweredProfileFields(current.profile) + 1),
-          },
-        }));
-
-        setHistory((current) => [...current, { role: "assistant", text: response.reply || "Captured." }]);
-      } else if (activeProject) {
-        const response = await requestStudioTurn({
-          history,
-          userText: trimmed,
-          stage: "build-refine",
-          currentProject: activeProject,
-        });
-
-        onUpdateProjectField(
-          activeProject.id,
-          "whatChuckieKnows",
-          appendKnowledge(activeProject.whatChuckieKnows, response.knowledgeNote || trimmed),
-        );
-
-        setHistory((current) => [...current, { role: "assistant", text: response.reply || "Captured." }]);
-      }
-    } catch (submitError) {
-      setHistory((current) => current.slice(0, -1));
-      setInput(trimmed);
-      setError(submitError instanceof Error ? submitError.message : "Unable to talk to Chuckie right now.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="studio-panel">
-      <div className="studio-panel-head">
-        <div className="review-section-label">Step 4</div>
-        <h2>Ongoing Conversational Enrichment</h2>
-        <p>Chuckie keeps surfacing what it still does not know, then folds that context back into your profile and builds.</p>
-      </div>
-
-      <div className="studio-toggle-row">
-        <button
-          type="button"
-          className={`taxonomy-pill${target === "profile" ? " taxonomy-pill-active" : ""}`}
-          onClick={() => setTarget("profile")}
-        >
-          <span>◎</span>
-          <strong>Background</strong>
-        </button>
-        <button
-          type="button"
-          className={`taxonomy-pill${target === "build" ? " taxonomy-pill-active" : ""}`}
-          onClick={() => activeProject && setTarget("build")}
-          disabled={!activeProject}
-        >
-          <span>◧</span>
-          <strong>Builds</strong>
-        </button>
-      </div>
-
-      {target === "build" ? (
-        <div className="studio-form-grid">
-          <label className="studio-form-wide">
-            Which build?
-            <select
-              className="review-select"
-              value={activeProject?.id ?? ""}
-              onChange={(event) => setSelectedBuildId(event.target.value)}
-            >
-              {builder.projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title || "Untitled build"}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      ) : null}
-
-      <div className="studio-section-block">
-        <div className="review-section-label">Chuckie Wants To Know</div>
-        <div className="focus-area-grid">
-          {filteredPrompts.map((prompt) => {
-            const active = prompt.id === activePromptId;
-            return (
-              <button
-                key={prompt.id}
-                type="button"
-                className={`focus-area-pill${active ? " focus-area-pill-active" : ""}`}
-                onClick={() => activatePrompt(prompt)}
-              >
-                <strong>{prompt.label}</strong>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="studio-chat-surface">
-        <div className="builder-conversation">
-          {history.map((entry, index) =>
-            entry.role === "user" ? (
-              <div key={`${entry.role}-${index}`} className="builder-line builder-line-builder">
-                <p>{entry.text}</p>
-              </div>
-            ) : (
-              <div key={`${entry.role}-${index}`} className="builder-line builder-line-chuckie">
-                <div className="builder-avatar">◎</div>
-                <p>{entry.text}</p>
-              </div>
-            ),
-          )}
-          {loading ? (
-            <div className="builder-line builder-line-chuckie">
-              <div className="builder-avatar">◎</div>
-              <p>Thinking...</p>
-            </div>
-          ) : null}
-        </div>
-      </div>
 
       <div className="builder-composer">
         <textarea
           rows="4"
           value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={
-            target === "profile"
-              ? "Tell Chuckie more about your background, how you work, or what you want to be known for."
-              : "Tell Chuckie more about this build, what was hard, or why it matters."
-          }
+          onChange={(event) => onInputChange(event.target.value)}
+          placeholder="Talk to Chuckie. It should ask the next best question, not hand you another form."
         />
         <div className="builder-composer-actions">
-          <button type="button" className="solid-button builder-send-button" onClick={submit} disabled={!input.trim() || loading}>
+          <button type="button" className="solid-button builder-send-button" onClick={onSubmit} disabled={!input.trim() || loading}>
             {loading ? "Sending..." : "Send"}
           </button>
         </div>
@@ -1211,58 +422,55 @@ function ChuckieStudioPanel({ builder, onUpdateBuilder, onUpdateProjectField }) 
   );
 }
 
-function OnboardingWorkspace({
+export default function BuilderStudio({
   builder,
   onUpdateBuilder,
   onCreateProject,
   onDeleteProject,
   onUpdateProjectField,
-  selectedProjectId,
-  setSelectedProjectId,
 }) {
-  const [tab, setTab] = useState("onboarding");
-  const [step, setStep] = useState(builder.onboarding.currentStep || "basics");
+  const [tab, setTab] = useState("chat");
+  const [mode, setMode] = useState("profile");
+  const [focusField, setFocusField] = useState(() => getNextInterviewField(builder));
+  const [selectedProjectId, setSelectedProjectId] = useState(builder.projects[0]?.id ?? "");
+  const [history, setHistory] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const activeProject = getProjectEditorShape(
+    builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null,
+  );
 
   useEffect(() => {
-    setStep(builder.onboarding.currentStep || "basics");
-  }, [builder.onboarding.currentStep]);
-
-  const goToStep = (nextStep) => {
-    setStep(nextStep);
-    onUpdateBuilder((current) => ({
-      ...current,
-      onboarding: {
-        ...current.onboarding,
-        currentStep: nextStep,
-      },
-    }));
-  };
-
-  const enterStudio = () => {
-    onUpdateBuilder((current) => ({
-      ...current,
-      onboarding: {
-        ...current.onboarding,
-        studioReady: true,
-        currentStep: current.onboarding.currentStep === "basics" ? "interview" : current.onboarding.currentStep,
-      },
-    }));
-  };
-
-  const skipToProjects = () => {
-    if (!builder.projects.length) {
-      const nextId = onCreateProject(buildDraft());
-      setSelectedProjectId(nextId);
+    if (!selectedProjectId && builder.projects[0]?.id) {
+      setSelectedProjectId(builder.projects[0].id);
+      return;
     }
 
-    onUpdateBuilder((current) => ({
-      ...current,
-      onboarding: {
-        ...current.onboarding,
-        skippedToProjects: true,
-        currentStep: "projects",
-      },
-    }));
+    if (selectedProjectId && !builder.projects.some((project) => project.id === selectedProjectId)) {
+      setSelectedProjectId(builder.projects[0]?.id ?? "");
+    }
+  }, [builder.projects, selectedProjectId]);
+
+  useEffect(() => {
+    if (mode === "profile" && builder.profile[focusField]) {
+      setFocusField(getNextInterviewField(builder));
+    }
+  }, [builder.profile, focusField, mode]);
+
+  const updateBuilderField = (field, value) => {
+    onUpdateBuilder((current) => {
+      const next = { ...current, [field]: value };
+      if (field === "displayName" || field === "name") {
+        next.name = value;
+      }
+      return next;
+    });
+  };
+
+  const updateListField = (field, value) => {
+    onUpdateBuilder((current) => ({ ...current, [field]: value }));
   };
 
   const toggleTool = (bucket, tool) => {
@@ -1290,282 +498,205 @@ function OnboardingWorkspace({
     });
   };
 
-  const steps = [
-    {
-      id: "basics",
-      label: "Structured Basics",
-      completed: isBasicsComplete(builder),
-    },
-    {
-      id: "interview",
-      label: "Adaptive Interview",
-      completed: countAnsweredProfileFields(builder.profile) > 0,
-    },
-    {
-      id: "projects",
-      label: "Build Entry",
-      completed: builder.projects.length > 0,
-    },
-    {
-      id: "enrich",
-      label: "Ongoing Chuckie",
-      completed: false,
-    },
-  ];
-
-  return (
-    <div className="builder-layout">
-      <aside className="builder-stepper">
-        {steps.map((item) => {
-          const active = step === item.id;
-          const className = active
-            ? "builder-step builder-step-active"
-            : item.completed
-              ? "builder-step builder-step-completed"
-              : "builder-step builder-step-upcoming";
-
-          return (
-            <button key={item.id} type="button" className={className} onClick={() => item.id !== "enrich" && goToStep(item.id)}>
-              <span className="builder-step-marker" />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </aside>
-
-      <div className="builder-interview">
-        <div className="studio-shell-tabs">
-          <button
-            type="button"
-            className={`studio-shell-tab${tab === "onboarding" ? " studio-shell-tab-active" : ""}`}
-            onClick={() => setTab("onboarding")}
-          >
-            Onboarding
-          </button>
-          <button
-            type="button"
-            className={`studio-shell-tab${tab === "profile" ? " studio-shell-tab-active" : ""}`}
-            onClick={() => setTab("profile")}
-          >
-            Profile Preview
-          </button>
-        </div>
-
-        {tab === "profile" ? (
-          <ProfileSnapshot builder={builder} onUpdateBuilder={onUpdateBuilder} />
-        ) : step === "basics" ? (
-          <BasicsStep
-            builder={builder}
-            onToggleTool={toggleTool}
-            onGithubProfileChange={(value) =>
-              onUpdateBuilder((current) => ({
-                ...current,
-                github: {
-                  ...current.github,
-                  profileUrl: value,
-                },
-              }))
-            }
-            onGithubReposChange={(value) =>
-              onUpdateBuilder((current) => ({
-                ...current,
-                github: {
-                  ...current.github,
-                  repoUrls: value
-                    .split("\n")
-                    .map((item) => item.trim())
-                    .filter(Boolean),
-                },
-                onboarding: {
-                  ...current.onboarding,
-                  currentStep: "basics",
-                },
-              }))
-            }
-            onContinue={() => goToStep("interview")}
-          />
-        ) : step === "interview" ? (
-          <InterviewStep
-            builder={builder}
-            onUpdateBuilder={onUpdateBuilder}
-            onSkipToProjects={skipToProjects}
-            onEnterStudio={enterStudio}
-          />
-        ) : (
-          <BuildCollection
-            builder={builder}
-            selectedProjectId={selectedProjectId}
-            setSelectedProjectId={setSelectedProjectId}
-            onCreateProject={onCreateProject}
-            onDeleteProject={onDeleteProject}
-            onUpdateProjectField={onUpdateProjectField}
-            showEnterStudio={canEnterStudio(builder)}
-            onEnterStudio={enterStudio}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function StudioWorkspace({
-  builder,
-  onUpdateBuilder,
-  onCreateProject,
-  onDeleteProject,
-  onUpdateProjectField,
-  selectedProjectId,
-  setSelectedProjectId,
-}) {
-  const [view, setView] = useState(
-    builder.onboarding.currentStep === "projects" || builder.onboarding.skippedToProjects ? "builds" : "profile",
-  );
-
-  useEffect(() => {
-    if (view === "builds" && !builder.projects.length) {
-      setSelectedProjectId(null);
-    }
-  }, [builder.projects, setSelectedProjectId, view]);
-
-  const selectedProject = getProjectEditorShape(
-    builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null,
-  );
-
-  const addBuild = () => {
-    const projectId = onCreateProject(buildDraft());
-    setSelectedProjectId(projectId);
-    setView("builds");
+  const startInterview = () => {
+    const nextField = getNextInterviewField(builder);
+    setMode("profile");
+    setFocusField(nextField);
+    setError("");
+    setInput("");
+    setHistory([
+      {
+        role: "assistant",
+        text: hasInterviewSignal(builder)
+          ? buildReturningInterviewQuestion(builder)
+          : buildInterviewQuestion(nextField, builder),
+      },
+    ]);
   };
 
-  return (
-    <div className="builder-workspace">
-      <aside className="studio-sidebar">
-        <div className="studio-sidebar-head">
-          <div className="landing-eyebrow">Builder Studio</div>
-          <strong>Keep Teaching Chuckie</strong>
-          <span>{builder.projects.length} builds</span>
-        </div>
+  const updateWhatChuckieKnows = () => {
+    setMode("profile");
+    setFocusField(builder.profile.currentFocus ? "currentFocus" : getNextInterviewField(builder));
+    setError("");
+    setInput("");
+    setHistory([
+      {
+        role: "assistant",
+        kind: "recap",
+        recap: buildInterviewRecap(builder),
+      },
+      {
+        role: "assistant",
+        text: buildReturningInterviewQuestion(builder),
+      },
+    ]);
+  };
 
-        <div className="studio-sidebar-section">
-          <div className="studio-sidebar-label">Studio</div>
-          <button
-            type="button"
-            className={`studio-nav-button${view === "profile" ? " studio-nav-button-active" : ""}`}
-            onClick={() => setView("profile")}
-          >
-            Profile
-          </button>
-          <button
-            type="button"
-            className={`studio-nav-button${view === "chuckie" ? " studio-nav-button-active" : ""}`}
-            onClick={() => setView("chuckie")}
-          >
-            Talk to Chuckie
-          </button>
-          <button
-            type="button"
-            className={`studio-nav-button${view === "builds" ? " studio-nav-button-active" : ""}`}
-            onClick={() => setView("builds")}
-          >
-            Builds
-          </button>
-        </div>
+  const startWithBuild = () => {
+    setMode("build");
+    setError("");
+    setInput("");
+    setHistory([
+      {
+        role: "assistant",
+        text: buildProjectInterviewQuestion(builder, activeProject),
+      },
+    ]);
+  };
 
-        <div className="studio-sidebar-section">
-          <div className="studio-sidebar-label">Builds</div>
-          <div className="studio-add-row">
-            <button type="button" className="ghost-button" onClick={addBuild}>
-              Add Build
-            </button>
-          </div>
+  const submit = async () => {
+    const trimmed = input.trim();
 
-          <div className="studio-build-list">
-            {builder.projects.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                className={`studio-build-card${selectedProject?.id === project.id && view === "builds" ? " studio-build-card-active" : ""}`}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  setView("builds");
-                }}
-              >
-                <div className="studio-build-card-top">
-                  <span>{project.buildType || project.buildProfileType || "Build"}</span>
-                </div>
-                <h4>{project.title || "Untitled build"}</h4>
-                <p>{project.shortDescription || "No description yet."}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      <div className="studio-content">
-        {view === "profile" ? (
-          <ProfileSnapshot builder={builder} onUpdateBuilder={onUpdateBuilder} />
-        ) : view === "chuckie" ? (
-          <ChuckieStudioPanel
-            builder={builder}
-            onUpdateBuilder={onUpdateBuilder}
-            onUpdateProjectField={onUpdateProjectField}
-          />
-        ) : (
-          <BuildEditor
-            builder={builder}
-            project={selectedProject}
-            onDeleteProject={onDeleteProject}
-            onUpdateProjectField={onUpdateProjectField}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function BuilderStudio({
-  builder,
-  onUpdateBuilder,
-  onCreateProject,
-  onDeleteProject,
-  onUpdateProjectField,
-}) {
-  const [selectedProjectId, setSelectedProjectId] = useState(builder.projects[0]?.id ?? null);
-
-  useEffect(() => {
-    if (!selectedProjectId && builder.projects[0]?.id) {
-      setSelectedProjectId(builder.projects[0].id);
+    if (!trimmed || loading) {
       return;
     }
 
-    if (selectedProjectId && !builder.projects.some((project) => project.id === selectedProjectId)) {
-      setSelectedProjectId(builder.projects[0]?.id ?? null);
-    }
-  }, [builder.projects, selectedProjectId]);
+    setLoading(true);
+    setError("");
+    setInput("");
+    setHistory((current) => [...current, { role: "user", text: trimmed }]);
 
-  if (!isStudioReady(builder)) {
-    return (
-      <OnboardingWorkspace
-        builder={builder}
-        onUpdateBuilder={onUpdateBuilder}
-        onCreateProject={onCreateProject}
-        onDeleteProject={onDeleteProject}
-        onUpdateProjectField={onUpdateProjectField}
-        selectedProjectId={selectedProjectId}
-        setSelectedProjectId={setSelectedProjectId}
-      />
-    );
-  }
+    try {
+      const requestHistory = buildChatHistory(history);
+
+      if (mode === "build") {
+        if (activeProject) {
+          const response = await requestStudioTurn({
+            history: requestHistory,
+            userText: trimmed,
+            stage: "build-refine",
+            currentProject: activeProject,
+          });
+
+          onUpdateProjectField(
+            activeProject.id,
+            "whatChuckieKnows",
+            appendKnowledge(activeProject.whatChuckieKnows, response.knowledgeNote || trimmed),
+          );
+          onUpdateBuilder((current) => ({
+            ...current,
+            onboarding: {
+              ...current.onboarding,
+              studioReady: true,
+              currentStep: "projects",
+            },
+          }));
+
+          setHistory((current) => [...current, { role: "assistant", text: response.reply || "Captured." }]);
+        } else {
+          const response = await requestStudioTurn({
+            history: requestHistory,
+            userText: trimmed,
+            stage: "projects",
+          });
+
+          if (response.projectDraft) {
+            const projectId = onCreateProject(buildProjectFromCapture(response.projectDraft, trimmed));
+            setSelectedProjectId(projectId);
+          }
+
+          onUpdateBuilder((current) => ({
+            ...current,
+            onboarding: {
+              ...current.onboarding,
+              studioReady: true,
+              currentStep: "projects",
+            },
+          }));
+
+          setHistory((current) => [...current, { role: "assistant", text: response.reply || "Captured." }]);
+        }
+
+        return;
+      }
+
+      const response = await requestStudioTurn({
+        history: requestHistory,
+        userText: trimmed,
+        stage: "onboarding-interview",
+        focusField,
+      });
+
+      const fieldToUpdate = response.profileField || focusField;
+      const nextField = response.nextFocusField || fieldToUpdate;
+
+      onUpdateBuilder((current) => ({
+        ...current,
+        profile: {
+          ...current.profile,
+          [fieldToUpdate]: response.fieldValue || trimmed,
+        },
+        onboarding: {
+          ...current.onboarding,
+          currentStep: "interview",
+          studioReady: true,
+          interviewResponses: Math.max(current.onboarding.interviewResponses, 1),
+        },
+      }));
+
+      setFocusField(nextField);
+      setHistory((current) => [...current, { role: "assistant", text: response.reply || "Captured." }]);
+    } catch (submitError) {
+      setHistory((current) => current.slice(0, -1));
+      setInput(trimmed);
+      setError(submitError instanceof Error ? submitError.message : "Unable to talk to Chuckie right now.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <StudioWorkspace
-      builder={builder}
-      onUpdateBuilder={onUpdateBuilder}
-      onCreateProject={onCreateProject}
-      onDeleteProject={onDeleteProject}
-      onUpdateProjectField={onUpdateProjectField}
-      selectedProjectId={selectedProjectId}
-      setSelectedProjectId={setSelectedProjectId}
-    />
+    <div className="interview-shell">
+      <div className="studio-shell-tabs">
+        <button
+          type="button"
+          className={`studio-shell-tab${tab === "chat" ? " studio-shell-tab-active" : ""}`}
+          onClick={() => setTab("chat")}
+        >
+          Chat
+        </button>
+        <button
+          type="button"
+          className={`studio-shell-tab${tab === "knowledge" ? " studio-shell-tab-active" : ""}`}
+          onClick={() => setTab("knowledge")}
+        >
+          What Chuckie Knows
+        </button>
+        <button
+          type="button"
+          className={`studio-shell-tab${tab === "studio" ? " studio-shell-tab-active" : ""}`}
+          onClick={() => setTab("studio")}
+        >
+          Studio
+        </button>
+      </div>
+
+      {tab === "chat" ? (
+        <InterviewPanel
+          builder={builder}
+          history={history}
+          input={input}
+          loading={loading}
+          error={error}
+          onInputChange={setInput}
+          onSubmit={submit}
+          onStartInterview={startInterview}
+          onUpdateWhatChuckieKnows={updateWhatChuckieKnows}
+          onStartWithBuild={startWithBuild}
+          onOpenStudio={() => setTab("studio")}
+        />
+      ) : tab === "knowledge" ? (
+        <KnowledgePanel builder={builder} onUpdateBuilder={onUpdateBuilder} onToggleTool={toggleTool} />
+      ) : (
+        <BuilderSetup
+          builder={builder}
+          onUpdateBuilderField={updateBuilderField}
+          onUpdateListField={updateListField}
+          onCreateProject={onCreateProject}
+          onDeleteProject={onDeleteProject}
+          onUpdateProjectField={onUpdateProjectField}
+        />
+      )}
+    </div>
   );
 }

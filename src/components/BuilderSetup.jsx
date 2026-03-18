@@ -883,13 +883,6 @@ export default function BuilderSetup({
           >
             About You
           </button>
-          <button
-            type="button"
-            className={`studio-nav-button${view === "refine" ? " studio-nav-button-active" : ""}`}
-            onClick={() => setView("refine")}
-          >
-            Talk to Chuckie
-          </button>
         </div>
 
         <div className="studio-sidebar-section">
@@ -928,13 +921,6 @@ export default function BuilderSetup({
             builder={builder}
             onUpdateBuilderField={onUpdateBuilderField}
             onUpdateListField={onUpdateListField}
-          />
-        ) : view === "refine" ? (
-          <ChuckieRefinePanel
-            builder={builder}
-            selectedProject={selectedProject}
-            onUpdateBuilderField={onUpdateBuilderField}
-            onUpdateProjectField={onUpdateProjectField}
           />
         ) : (
           <BuildEditor
