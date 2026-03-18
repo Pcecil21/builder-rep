@@ -775,7 +775,7 @@ a {
 }
 
 .interview-thread {
-  min-height: 260px;
+  min-height: 140px;
 }
 
 .interview-recap-card {
@@ -809,6 +809,27 @@ a {
 .interview-recap-list li {
   color: var(--text);
   line-height: 1.7;
+}
+
+.interview-config-card {
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(143, 36, 93, 0.16);
+  background: rgba(143, 36, 93, 0.05);
+}
+
+.interview-config-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.interview-config-card p {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 .studio-panel-head h2 {
@@ -1812,6 +1833,38 @@ a {
 
 .builder-send-button {
   min-width: 104px;
+}
+
+.interview-composer-shell {
+  border: 1px solid rgba(226, 226, 220, 0.92);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 10px;
+}
+
+.interview-composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.interview-composer-row textarea {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 28px;
+  max-height: 160px;
+  padding: 10px 12px;
+}
+
+.interview-composer-row textarea:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.interview-composer-row .builder-send-button {
+  min-width: 112px;
+  flex-shrink: 0;
 }
 
 .builder-review {

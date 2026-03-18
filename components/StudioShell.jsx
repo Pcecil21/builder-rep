@@ -18,6 +18,7 @@ export default function StudioShell({
   initialBuilder,
   initialShareUrl,
   initialPublishedAt,
+  chatConfigured,
 }) {
   const [builder, setBuilder] = useState(() => syncBuilderFromProfile(initialBuilder));
   const [shareUrl, setShareUrl] = useState(initialShareUrl);
@@ -300,6 +301,7 @@ export default function StudioShell({
           onCreateProject={createProject}
           onDeleteProject={deleteProject}
           onUpdateProjectField={updateProjectField}
+          chatConfigured={chatConfigured}
         />
       </div>
     </div>

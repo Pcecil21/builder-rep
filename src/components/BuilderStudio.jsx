@@ -183,15 +183,22 @@ function ToolBucket({ title, helper, selected, onToggle }) {
   );
 }
 
-function StarterCards({ hasSignal, onStartInterview, onUpdateWhatChuckieKnows, onStartWithBuild, onOpenStudio }) {
+function StarterCards({
+  hasSignal,
+  chatConfigured,
+  onStartInterview,
+  onUpdateWhatChuckieKnows,
+  onStartWithBuild,
+  onOpenStudio,
+}) {
   return (
     <div className="interview-starter-grid">
-      <button type="button" className="interview-starter-card" onClick={onStartInterview}>
+      <button type="button" className="interview-starter-card" onClick={onStartInterview} disabled={!chatConfigured}>
         <strong>{hasSignal ? "Keep the interview going" : "Start my interview"}</strong>
         <span>{hasSignal ? "Keep teaching Chuckie through the chat." : "Let Chuckie start learning about you."}</span>
       </button>
 
-      <button type="button" className="interview-starter-card" onClick={onStartWithBuild}>
+      <button type="button" className="interview-starter-card" onClick={onStartWithBuild} disabled={!chatConfigured}>
         <strong>Start with a build</strong>
         <span>Lead with the first project Chuckie should understand.</span>
       </button>
@@ -200,7 +207,7 @@ function StarterCards({ hasSignal, onStartInterview, onUpdateWhatChuckieKnows, o
         type="button"
         className="interview-starter-card"
         onClick={onUpdateWhatChuckieKnows}
-        disabled={!hasSignal}
+        disabled={!chatConfigured || !hasSignal}
       >
         <strong>Update what you know</strong>
         <span>See Chuckie's current picture, then tell it what changed.</span>
@@ -366,6 +373,7 @@ function InterviewPanel({
   input,
   loading,
   error,
+  chatConfigured,
   onInputChange,
   onSubmit,
   onStartInterview,
@@ -393,6 +401,7 @@ function InterviewPanel({
 
           <StarterCards
             hasSignal={hasSignal}
+            chatConfigured={chatConfigured}
             onStartInterview={onStartInterview}
             onUpdateWhatChuckieKnows={onUpdateWhatChuckieKnows}
             onStartWithBuild={onStartWithBuild}
@@ -403,15 +412,29 @@ function InterviewPanel({
         <ChatThread history={history} loading={loading} />
       )}
 
-      <div className="builder-composer">
-        <textarea
-          rows="4"
-          value={input}
-          onChange={(event) => onInputChange(event.target.value)}
-          placeholder="Tell Chuckie what's top of mind, or answer its last question."
-        />
-        <div className="builder-composer-actions">
-          <button type="button" className="solid-button builder-send-button" onClick={onSubmit} disabled={!input.trim() || loading}>
+      {!chatConfigured ? (
+        <div className="interview-config-card">
+          <div className="review-section-label">Model Required</div>
+          <strong>Chuckie interview is offline until a real model is configured.</strong>
+          <p>Set a valid OpenAI API key for this environment before using the interview.</p>
+        </div>
+      ) : null}
+
+      <div className="builder-composer interview-composer-shell">
+        <div className="interview-composer-row">
+          <textarea
+            rows="1"
+            value={input}
+            onChange={(event) => onInputChange(event.target.value)}
+            placeholder="Tell Chuckie what's top of mind, or answer its last question."
+            disabled={!chatConfigured}
+          />
+          <button
+            type="button"
+            className="solid-button builder-send-button"
+            onClick={onSubmit}
+            disabled={!chatConfigured || !input.trim() || loading}
+          >
             {loading ? "Sending..." : "Send"}
           </button>
         </div>
@@ -428,6 +451,7 @@ export default function BuilderStudio({
   onCreateProject,
   onDeleteProject,
   onUpdateProjectField,
+  chatConfigured = false,
 }) {
   const [tab, setTab] = useState("chat");
   const [mode, setMode] = useState("profile");
@@ -499,6 +523,10 @@ export default function BuilderStudio({
   };
 
   const startInterview = () => {
+    if (!chatConfigured) {
+      return;
+    }
+
     const nextField = getNextInterviewField(builder);
     setMode("profile");
     setFocusField(nextField);
@@ -515,6 +543,10 @@ export default function BuilderStudio({
   };
 
   const updateWhatChuckieKnows = () => {
+    if (!chatConfigured) {
+      return;
+    }
+
     setMode("profile");
     setFocusField(builder.profile.currentFocus ? "currentFocus" : getNextInterviewField(builder));
     setError("");
@@ -533,6 +565,10 @@ export default function BuilderStudio({
   };
 
   const startWithBuild = () => {
+    if (!chatConfigured) {
+      return;
+    }
+
     setMode("build");
     setError("");
     setInput("");
@@ -547,7 +583,7 @@ export default function BuilderStudio({
   const submit = async () => {
     const trimmed = input.trim();
 
-    if (!trimmed || loading) {
+    if (!chatConfigured || !trimmed || loading) {
       return;
     }
 
@@ -678,6 +714,7 @@ export default function BuilderStudio({
           input={input}
           loading={loading}
           error={error}
+          chatConfigured={chatConfigured}
           onInputChange={setInput}
           onSubmit={submit}
           onStartInterview={startInterview}

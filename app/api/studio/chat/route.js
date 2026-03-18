@@ -27,6 +27,13 @@ export async function POST(request) {
     return unauthorizedResponse;
   }
 
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: "Chuckie interview requires a configured OpenAI API key in this environment." },
+      { status: 503 },
+    );
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const { history = [], userText, stage, currentProject, focusField } = schema.parse(body);

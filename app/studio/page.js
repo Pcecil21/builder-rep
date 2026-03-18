@@ -30,6 +30,7 @@ export default async function StudioPage() {
       initialBuilder={record.draft}
       initialShareUrl={shareUrl}
       initialPublishedAt={record.publishedAt}
+      chatConfigured={Boolean(process.env.OPENAI_API_KEY)}
     />
   );
 }
