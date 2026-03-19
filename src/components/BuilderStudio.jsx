@@ -418,7 +418,7 @@ function InterviewPanel({
   const hasSignal = hasInterviewSignal(builder);
 
   return (
-    <div className="interview-stack">
+    <div className={`interview-stack${history.length ? " interview-stack-chat" : ""}`}>
       {!history.length ? (
         <div className="studio-panel interview-hero">
           <div className="interview-hero-mark">◎</div>

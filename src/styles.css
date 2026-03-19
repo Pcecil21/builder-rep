@@ -695,6 +695,11 @@ a {
   gap: 10px;
 }
 
+.interview-stack-chat {
+  min-height: calc(100vh - 220px);
+  justify-content: space-between;
+}
+
 .studio-panel {
   border-radius: 6px;
   padding: 16px;
@@ -803,6 +808,8 @@ a {
   border-radius: 0;
   background: transparent;
   padding: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .studio-chat-empty {
