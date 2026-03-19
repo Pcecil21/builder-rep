@@ -11,6 +11,7 @@ function getProject(builder, projectId) {
 }
 
 export default function PortfolioPageClient({ builder, slug }) {
+  const [portfolioMode, setPortfolioMode] = useState("capability-markers");
   const [selectedProjectId, setSelectedProjectId] = useState(builder.projects[0]?.id ?? null);
   const mappedProjects = useMemo(() => getRadarProjects(builder), [builder]);
   const selectedProject = getProject(builder, selectedProjectId) ?? builder.projects[0] ?? null;
@@ -64,10 +65,27 @@ export default function PortfolioPageClient({ builder, slug }) {
             </div>
           </div>
 
+          <div className="portfolio-mode-toggle">
+            <button
+              type="button"
+              className={`ghost-button${portfolioMode === "capability-markers" ? " ghost-button-active" : ""}`}
+              onClick={() => setPortfolioMode("capability-markers")}
+            >
+              Capability Markers
+            </button>
+            <button
+              type="button"
+              className={`ghost-button${portfolioMode === "what-it-does" ? " ghost-button-active" : ""}`}
+              onClick={() => setPortfolioMode("what-it-does")}
+            >
+              What It Does
+            </button>
+          </div>
+
           <BuilderEcosystem
             builder={builder}
             slug={slug}
-            mode="capability-markers"
+            mode={portfolioMode}
             onOpenProject={openProjectDetails}
           />
         </section>

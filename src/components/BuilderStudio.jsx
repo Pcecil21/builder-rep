@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import BuilderSetup from "@/src/components/BuilderSetup";
 import {
   buildInterviewQuestion,
@@ -9,8 +9,6 @@ import {
   buildReturningInterviewQuestion,
   getNextInterviewField,
   hasInterviewSignal,
-  PROFILE_FIELD_LABELS,
-  PROFILE_FIELD_ORDER,
   TOOL_OPTIONS,
 } from "@/lib/builder-profile";
 import { requestStudioTurn } from "@/src/lib/api";
@@ -239,7 +237,26 @@ function RecapCard({ recap }) {
   );
 }
 
+function TypingIndicator() {
+  return (
+    <div className="builder-line builder-line-chuckie">
+      <div className="builder-avatar">◎</div>
+      <div className="typing">
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
+  );
+}
+
 function ChatThread({ history, loading }) {
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [history, loading]);
+
   return (
     <div className="studio-chat-surface interview-thread">
       <div className="builder-conversation">
@@ -257,12 +274,8 @@ function ChatThread({ history, loading }) {
             </div>
           ),
         )}
-        {loading ? (
-          <div className="builder-line builder-line-chuckie">
-            <div className="builder-avatar">◎</div>
-            <p>Thinking...</p>
-          </div>
-        ) : null}
+        {loading ? <TypingIndicator /> : null}
+        <div ref={endRef} style={{ height: 1 }} />
       </div>
     </div>
   );
@@ -271,16 +284,6 @@ function ChatThread({ history, loading }) {
 function KnowledgePanel({ builder, onUpdateBuilder, onToggleTool }) {
   const recap = useMemo(() => buildInterviewRecap(builder), [builder]);
 
-  const updateProfileField = (field, value) => {
-    onUpdateBuilder((current) => ({
-      ...current,
-      profile: {
-        ...current.profile,
-        [field]: value,
-      },
-    }));
-  };
-
   return (
     <div className="interview-stack">
       <RecapCard recap={recap} />
@@ -288,8 +291,8 @@ function KnowledgePanel({ builder, onUpdateBuilder, onToggleTool }) {
       <div className="studio-panel">
         <div className="studio-panel-head">
           <div className="review-section-label">Structured Context</div>
-          <h2>Keep Chuckie Grounded</h2>
-          <p>Use this when you want to correct or anchor the profile outside the conversation.</p>
+          <h2>Tools and GitHub</h2>
+          <p>Give Chuckie context it can use to ask better questions. Everything else comes from the conversation.</p>
         </div>
 
         <ToolBucket
@@ -348,20 +351,51 @@ function KnowledgePanel({ builder, onUpdateBuilder, onToggleTool }) {
             </label>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="studio-form-grid">
-          {PROFILE_FIELD_ORDER.map((field) => (
-            <label key={field} className="studio-form-wide">
-              {PROFILE_FIELD_LABELS[field]}
-              <textarea
-                rows={field === "background" || field === "builderPhilosophy" ? 4 : 3}
-                value={builder.profile[field]}
-                onChange={(event) => updateProfileField(field, event.target.value)}
-                placeholder={`Add ${PROFILE_FIELD_LABELS[field].toLowerCase()}.`}
-              />
-            </label>
-          ))}
-        </div>
+function ComposerBar({ input, onInputChange, onSubmit, chatConfigured, loading }) {
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    }
+  }, [input]);
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (chatConfigured && input.trim() && !loading) {
+        onSubmit();
+      }
+    }
+  };
+
+  return (
+    <div className="builder-composer interview-composer-shell">
+      <div className="interview-composer-row">
+        <textarea
+          ref={textareaRef}
+          rows="1"
+          value={input}
+          onChange={(event) => onInputChange(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Tell Chuckie what's top of mind, or answer its last question."
+          disabled={!chatConfigured}
+        />
+        <button
+          type="button"
+          className="solid-button builder-send-button"
+          onClick={onSubmit}
+          disabled={!chatConfigured || !input.trim() || loading}
+        >
+          {loading ? "Sending..." : "Send"}
+        </button>
       </div>
     </div>
   );
@@ -420,25 +454,13 @@ function InterviewPanel({
         </div>
       ) : null}
 
-      <div className="builder-composer interview-composer-shell">
-        <div className="interview-composer-row">
-          <textarea
-            rows="1"
-            value={input}
-            onChange={(event) => onInputChange(event.target.value)}
-            placeholder="Tell Chuckie what's top of mind, or answer its last question."
-            disabled={!chatConfigured}
-          />
-          <button
-            type="button"
-            className="solid-button builder-send-button"
-            onClick={onSubmit}
-            disabled={!chatConfigured || !input.trim() || loading}
-          >
-            {loading ? "Sending..." : "Send"}
-          </button>
-        </div>
-      </div>
+      <ComposerBar
+        input={input}
+        onInputChange={onInputChange}
+        onSubmit={onSubmit}
+        chatConfigured={chatConfigured}
+        loading={loading}
+      />
 
       {error ? <div className="studio-error">{error}</div> : null}
     </div>
@@ -457,7 +479,11 @@ export default function BuilderStudio({
   const [mode, setMode] = useState("profile");
   const [focusField, setFocusField] = useState(() => getNextInterviewField(builder));
   const [selectedProjectId, setSelectedProjectId] = useState(builder.projects[0]?.id ?? "");
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() =>
+    Array.isArray(builder.chatHistory) && builder.chatHistory.length > 0
+      ? builder.chatHistory
+      : [],
+  );
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -465,6 +491,17 @@ export default function BuilderStudio({
   const activeProject = getProjectEditorShape(
     builder.projects.find((project) => project.id === selectedProjectId) ?? builder.projects[0] ?? null,
   );
+
+  useEffect(() => {
+    if (history.length > 0) {
+      onUpdateBuilder((current) => ({
+        ...current,
+        chatHistory: history
+          .filter((entry) => entry.role === "user" || entry.role === "assistant")
+          .slice(-40),
+      }));
+    }
+  }, [history]);
 
   useEffect(() => {
     if (!selectedProjectId && builder.projects[0]?.id) {
@@ -600,7 +637,8 @@ export default function BuilderStudio({
           const response = await requestStudioTurn({
             history: requestHistory,
             userText: trimmed,
-            stage: "build-refine",
+            context: "build",
+            projectId: activeProject.id,
             currentProject: activeProject,
           });
 
@@ -623,7 +661,7 @@ export default function BuilderStudio({
           const response = await requestStudioTurn({
             history: requestHistory,
             userText: trimmed,
-            stage: "projects",
+            context: "build",
           });
 
           if (response.projectDraft) {
@@ -649,8 +687,7 @@ export default function BuilderStudio({
       const response = await requestStudioTurn({
         history: requestHistory,
         userText: trimmed,
-        stage: "onboarding-interview",
-        focusField,
+        context: "profile",
       });
 
       const fieldToUpdate = response.profileField || focusField;

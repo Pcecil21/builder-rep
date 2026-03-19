@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { PROFILE_FIELD_ORDER } from "@/lib/builder-profile";
 import { handleChatPayload } from "@/lib/server/chat";
 import { requireRouteSession } from "@/lib/server/session-guards";
 import { getStore } from "@/lib/server/store";
@@ -13,11 +12,9 @@ const messageSchema = z.object({
 const schema = z.object({
   history: z.array(messageSchema).max(24).optional(),
   userText: z.string().trim().min(1).max(2000),
-  stage: z
-    .enum(["discovery", "projects", "review", "profile-refine", "build-refine", "onboarding-interview"])
-    .optional(),
+  context: z.enum(["profile", "build"]).optional(),
+  projectId: z.string().max(120).optional(),
   currentProject: z.record(z.string(), z.any()).nullable().optional(),
-  focusField: z.enum(PROFILE_FIELD_ORDER).optional(),
 });
 
 export async function POST(request) {
@@ -36,13 +33,21 @@ export async function POST(request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { history = [], userText, stage, currentProject, focusField } = schema.parse(body);
+    const { history = [], userText, context, projectId, currentProject } = schema.parse(body);
     const store = getStore();
     const record = await store.getBuilderRecordByUserId(current.user.id);
 
     if (!record) {
       return NextResponse.json({ error: "Builder profile not found." }, { status: 404 });
     }
+
+    const resolvedContext = context ?? "profile";
+    const stage =
+      resolvedContext === "build"
+        ? currentProject
+          ? "build-refine"
+          : "projects"
+        : "onboarding-interview";
 
     const payload = await handleChatPayload({
       surface: "studio",
@@ -52,9 +57,10 @@ export async function POST(request) {
         text: typeof message.text === "string" ? message.text : "",
       })),
       userText,
-      stage: stage ?? "discovery",
+      stage,
       currentProject: currentProject ?? null,
-      focusField: focusField ?? null,
+      focusField: null,
+      projectId: projectId ?? null,
     });
 
     return NextResponse.json(payload);

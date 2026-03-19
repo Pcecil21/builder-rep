@@ -1746,7 +1746,7 @@ a {
 .builder-conversation {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 16px;
 }
 
 .builder-line {
@@ -1780,6 +1780,9 @@ a {
 .builder-line-chuckie p {
   max-width: 85%;
   color: var(--text);
+  background: var(--surface-raised);
+  border-radius: 18px 18px 18px 4px;
+  padding: 11px 16px;
 }
 
 .builder-line-builder {
@@ -2249,6 +2252,18 @@ a {
   color: #7c5cfc;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.portfolio-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ghost-button-active {
+  border-color: rgba(40, 116, 166, 0.35);
+  background: rgba(40, 116, 166, 0.08);
+  color: var(--text);
 }
 
 .portfolio-projects {

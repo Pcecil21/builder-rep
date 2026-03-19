@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { FOCUS_AREAS, getFocusAreaProjects } from "@/lib/build-taxonomy";
 import {
   getAxisById,
   getPortfolioPathForSlug,
@@ -227,6 +228,49 @@ function BuildDetail({ build, surface, slug, onClose, onOpenProject }) {
   );
 }
 
+function FocusAreaGrid({ builder, onOpenProject }) {
+  const focusMap = useMemo(() => getFocusAreaProjects(builder), [builder]);
+  const activeAreas = FOCUS_AREAS.filter((area) => focusMap[area.id]?.length > 0);
+
+  if (!activeAreas.length) {
+    return (
+      <div className="ecosystem-empty">
+        <p>No builds have been tagged with focus areas yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ecosystem-focus-grid">
+      {activeAreas.map((area) => {
+        const projects = focusMap[area.id];
+        return (
+          <div key={area.id} className="ecosystem-focus-card">
+            <div className="ecosystem-focus-card-head">
+              <span className="ecosystem-focus-icon">{area.icon}</span>
+              <span className="ecosystem-focus-label">{area.label}</span>
+              <span className="ecosystem-focus-count">{projects.length}</span>
+            </div>
+            <div className="ecosystem-focus-projects">
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  className="ecosystem-focus-project"
+                  onClick={() => onOpenProject?.(project.id)}
+                >
+                  <strong>{project.title}</strong>
+                  <span>{project.shortDescription}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const MODE_META = {
   "capability-markers": {
     kicker: "Capability Marker Map",
@@ -236,6 +280,15 @@ const MODE_META = {
     subtitle: (buildCount, coveredCount) =>
       `${buildCount} typed ${buildCount === 1 ? "build" : "builds"} across ${coveredCount} capability markers`,
     insightEmpty: "No capability markers tagged yet. Agent builds will shape this map once markers are selected.",
+  },
+  "what-it-does": {
+    kicker: "What It Does",
+    emptyTitle: "No focus areas tagged yet",
+    emptyCopy:
+      "Tag builds with focus areas to see what domains this builder covers.",
+    subtitle: (buildCount, coveredCount) =>
+      `${buildCount} ${buildCount === 1 ? "build" : "builds"} across ${coveredCount} focus areas`,
+    insightEmpty: "No focus areas tagged yet. Builds will appear here once tagged.",
   },
 };
 
@@ -286,6 +339,49 @@ export default function BuilderEcosystem({
     .sort((left, right) => right.count - left.count)
     .slice(0, 3);
   const uncoveredAxes = RADAR_AXES.filter((axis) => !coveredAxes.includes(axis.id));
+
+  const focusMap = useMemo(() => getFocusAreaProjects(builder), [builder]);
+  const focusAreaCount = Object.keys(focusMap).length;
+  const focusProjectCount = new Set(Object.values(focusMap).flatMap((p) => p.map((x) => x.id))).size;
+
+  if (mode === "what-it-does") {
+    if (!focusProjectCount) {
+      return (
+        <div className={`ecosystem-card ecosystem-card-${surface}`}>
+          <div className="ecosystem-empty">
+            <div className="ecosystem-kicker">{modeMeta.kicker}</div>
+            <h2>{modeMeta.emptyTitle}</h2>
+            <p>{modeMeta.emptyCopy}</p>
+          </div>
+          <style jsx>{baseStyles}</style>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`ecosystem-shell ecosystem-shell-${surface}`}>
+        <div className={`ecosystem-card ecosystem-card-${surface}`}>
+          <div className="ecosystem-header">
+            <div>
+              <div className="ecosystem-kicker">{modeMeta.kicker}</div>
+              <div className="ecosystem-title">{builder.displayName}'s Focus Areas</div>
+              <div className="ecosystem-subtitle">{modeMeta.subtitle(focusProjectCount, focusAreaCount)}</div>
+            </div>
+          </div>
+
+          <div style={{ padding: "16px 20px" }}>
+            <FocusAreaGrid builder={builder} onOpenProject={onOpenProject} />
+          </div>
+
+          <div className="ecosystem-footer">
+            <span>{surface === "chat" ? "Chuckie pulled up the focus area view." : "Builds are grouped by what they do."}</span>
+          </div>
+        </div>
+        <style jsx>{baseStyles}</style>
+        <style jsx global>{fontStyles}</style>
+      </div>
+    );
+  }
 
   if (!builds.length) {
     return (
@@ -857,6 +953,83 @@ const baseStyles = `
     font-size: 14px;
     line-height: 1.6;
     color: #6d6980;
+  }
+
+  .ecosystem-focus-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .ecosystem-focus-card {
+    border: 1px solid #EEEDF2;
+    border-radius: 12px;
+    padding: 14px;
+    background: #FCFBFE;
+  }
+
+  .ecosystem-focus-card-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .ecosystem-focus-icon {
+    font-size: 16px;
+  }
+
+  .ecosystem-focus-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  .ecosystem-focus-count {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    color: #7c5cfc;
+    background: #f5f3fa;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: auto;
+  }
+
+  .ecosystem-focus-projects {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ecosystem-focus-project {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #EEEDF2;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+
+  .ecosystem-focus-project:hover {
+    border-color: #DDD6FE;
+  }
+
+  .ecosystem-focus-project strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1a2e;
+    line-height: 1.3;
+  }
+
+  .ecosystem-focus-project span {
+    display: block;
+    font-size: 11px;
+    color: #8a8698;
+    line-height: 1.3;
+    margin-top: 2px;
   }
 
   @keyframes ecosystemSlideDown {
