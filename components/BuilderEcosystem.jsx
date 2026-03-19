@@ -537,10 +537,9 @@ const baseStyles = `
 
   .ecosystem-card {
     background: #fff;
-    border-radius: 16px;
-    border: 1.5px solid #eeedf2;
+    border-radius: 6px;
+    border: 1px solid #eeedf2;
     overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
     font-family: "IBM Plex Sans", "Avenir Next", sans-serif;
   }
 
@@ -550,11 +549,11 @@ const baseStyles = `
   }
 
   .ecosystem-header {
-    padding: 20px 24px 14px;
+    padding: 14px 16px 10px;
     border-bottom: 1px solid #f2f0f5;
     display: flex;
     justify-content: space-between;
-    gap: 18px;
+    gap: 12px;
     align-items: flex-start;
   }
 
@@ -583,7 +582,7 @@ const baseStyles = `
   }
 
   .ecosystem-title {
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 700;
     color: #1a1a2e;
     line-height: 1.2;
@@ -607,7 +606,7 @@ const baseStyles = `
 
   .ecosystem-stat-value {
     font-family: "IBM Plex Mono", monospace;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 700;
     color: #1a1a2e;
     line-height: 1;
@@ -623,8 +622,8 @@ const baseStyles = `
   .ecosystem-body {
     display: flex;
     align-items: flex-start;
-    padding: 14px 20px 16px;
-    gap: 8px;
+    padding: 10px 14px 12px;
+    gap: 6px;
   }
 
   .ecosystem-radar-wrap {
@@ -690,13 +689,13 @@ const baseStyles = `
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 10px;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 4px;
     background: var(--ecosystem-pill-bg);
-    border: 1.5px solid var(--ecosystem-pill-border);
+    border: 1px solid var(--ecosystem-pill-border);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: border-color 0.15s ease;
     text-align: left;
   }
 
@@ -747,12 +746,11 @@ const baseStyles = `
 
   .ecosystem-build-detail {
     background: #fff;
-    border-radius: 12px;
-    border: 1.5px solid var(--ecosystem-detail-border);
-    padding: 16px 18px;
-    margin-top: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-    animation: ecosystemSlideDown 0.2s ease both;
+    border-radius: 4px;
+    border: 1px solid var(--ecosystem-detail-border);
+    padding: 12px 14px;
+    margin-top: 4px;
+    animation: ecosystemSlideDown 0.15s ease both;
   }
 
   .ecosystem-build-detail-head {
@@ -787,9 +785,9 @@ const baseStyles = `
   .ecosystem-build-detail-close {
     background: #f5f3f8;
     border: none;
-    border-radius: 6px;
-    width: 22px;
-    height: 22px;
+    border-radius: 3px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
     color: #8a8698;
     font-size: 11px;
@@ -824,8 +822,8 @@ const baseStyles = `
     background: #f5f3fa;
     color: #7c5cfc;
     border: 1px solid #e0dbf0;
-    padding: 3px 8px;
-    border-radius: 5px;
+    padding: 2px 6px;
+    border-radius: 3px;
     font-weight: 500;
   }
 
@@ -851,19 +849,19 @@ const baseStyles = `
   }
 
   .ecosystem-type-section {
-    padding: 0 24px 14px;
+    padding: 0 16px 10px;
   }
 
   .ecosystem-type-bar {
     display: flex;
-    height: 5px;
-    border-radius: 3px;
+    height: 4px;
+    border-radius: 2px;
     overflow: hidden;
     gap: 2px;
   }
 
   .ecosystem-type-bar-segment {
-    border-radius: 3px;
+    border-radius: 2px;
     opacity: 0.55;
     transition: flex 0.3s ease;
   }
@@ -899,7 +897,7 @@ const baseStyles = `
   }
 
   .ecosystem-insight {
-    padding: 12px 24px;
+    padding: 8px 16px;
     border-top: 1px solid #f2f0f5;
     background: #fcfbfe;
   }
@@ -926,7 +924,7 @@ const baseStyles = `
   }
 
   .ecosystem-footer {
-    padding: 10px 24px;
+    padding: 8px 16px;
     border-top: 1px solid #f2f0f5;
     display: flex;
     justify-content: space-between;
@@ -938,12 +936,12 @@ const baseStyles = `
   }
 
   .ecosystem-empty {
-    padding: 28px;
+    padding: 16px;
   }
 
   .ecosystem-empty h2 {
-    margin: 10px 0 8px;
-    font-size: 24px;
+    margin: 6px 0 4px;
+    font-size: 20px;
     letter-spacing: -0.03em;
     color: #1a1a2e;
   }
@@ -957,14 +955,14 @@ const baseStyles = `
 
   .ecosystem-focus-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
   }
 
   .ecosystem-focus-card {
     border: 1px solid #EEEDF2;
-    border-radius: 12px;
-    padding: 14px;
+    border-radius: 4px;
+    padding: 10px;
     background: #FCFBFE;
   }
 
@@ -1004,8 +1002,8 @@ const baseStyles = `
   .ecosystem-focus-project {
     width: 100%;
     text-align: left;
-    padding: 8px 10px;
-    border-radius: 8px;
+    padding: 6px 8px;
+    border-radius: 3px;
     border: 1px solid #EEEDF2;
     background: #fff;
     cursor: pointer;
