@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import BuilderSetup from "@/src/components/BuilderSetup";
+import StudioAnalytics from "@/components/StudioAnalytics";
 import {
   buildInterviewQuestion,
   buildInterviewRecap,
@@ -742,6 +743,13 @@ export default function BuilderStudio({
         >
           Studio
         </button>
+        <button
+          type="button"
+          className={`studio-shell-tab${tab === "analytics" ? " studio-shell-tab-active" : ""}`}
+          onClick={() => setTab("analytics")}
+        >
+          Analytics
+        </button>
       </div>
 
       {tab === "chat" ? (
@@ -761,7 +769,7 @@ export default function BuilderStudio({
         />
       ) : tab === "knowledge" ? (
         <KnowledgePanel builder={builder} onUpdateBuilder={onUpdateBuilder} onToggleTool={toggleTool} />
-      ) : (
+      ) : tab === "studio" ? (
         <BuilderSetup
           builder={builder}
           onUpdateBuilderField={updateBuilderField}
@@ -770,7 +778,9 @@ export default function BuilderStudio({
           onDeleteProject={onDeleteProject}
           onUpdateProjectField={onUpdateProjectField}
         />
-      )}
+      ) : tab === "analytics" ? (
+        <StudioAnalytics />
+      ) : null}
     </div>
   );
 }
