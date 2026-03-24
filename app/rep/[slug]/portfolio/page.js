@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import PortfolioPageClient from "@/components/PortfolioPageClient";
+import { trackEvent } from "@/lib/server/analytics";
 import { getStore } from "@/lib/server/store";
 
 export async function generateMetadata({ params }) {
@@ -27,6 +29,9 @@ export default async function PublicPortfolioPage({ params }) {
   if (!builder) {
     notFound();
   }
+
+  const reqHeaders = await headers();
+  trackEvent(resolvedParams.slug, "portfolio_view", reqHeaders);
 
   return <PortfolioPageClient builder={builder} slug={resolvedParams.slug} />;
 }

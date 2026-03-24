@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { trackEvent } from "@/lib/server/analytics";
 import { handleChatPayload } from "@/lib/server/chat";
 import { getRequestIp } from "@/lib/server/request";
 import {
@@ -62,6 +63,8 @@ export async function POST(request) {
       })),
       userText,
     });
+
+    trackEvent(slug, "chat_message", request, { question: userText });
 
     return applyRateLimitHeaders(NextResponse.json(payload), repLimit);
   } catch (error) {
