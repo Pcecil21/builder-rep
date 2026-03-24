@@ -2366,6 +2366,396 @@ a {
   }
 }
 
+/* Public Rep Page — Hero */
+
+.rep-hero {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(40, 116, 166, 0.06), transparent 40%),
+    radial-gradient(circle at 80% 60%, rgba(45, 138, 46, 0.05), transparent 35%),
+    var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.rep-hero-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 48px 24px 44px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.rep-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.rep-hero-name {
+  margin: 10px 0 0;
+  font-size: clamp(36px, 5vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--text);
+}
+
+.rep-hero-bio {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  max-width: 480px;
+}
+
+.rep-hero-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.rep-theme-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(40, 116, 166, 0.07);
+  border: 1px solid rgba(40, 116, 166, 0.15);
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: color-mix(in srgb, #2874a6 60%, var(--text));
+  letter-spacing: 0.02em;
+}
+
+.rep-hero-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 24px;
+}
+
+.rep-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rep-stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.rep-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.rep-hero-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.rep-hero-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rep-hero-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  min-width: 220px;
+}
+
+.rep-hero-card-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(40, 116, 166, 0.1), rgba(45, 138, 46, 0.1));
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.rep-hero-card-label {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.rep-hero-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.rep-hero-card-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Public Rep Page — What They Build */
+
+.rep-builds-section {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.rep-builds-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 40px 24px 44px;
+}
+
+.rep-section-header {
+  margin-bottom: 28px;
+}
+
+.rep-section-title {
+  margin: 8px 0 0;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.rep-section-sub {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 520px;
+}
+
+.rep-builds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.rep-builds-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 20px;
+}
+
+.rep-builds-card-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.rep-builds-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rep-builds-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rep-builds-row-label {
+  font-size: 12px;
+  color: var(--text-soft);
+  min-width: 110px;
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.rep-builds-row-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--surface-muted);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rep-builds-row-fill {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, #2874a6 55%, #2d8a2e);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.rep-builds-row-count {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  min-width: 18px;
+  text-align: right;
+}
+
+.rep-builds-tools-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rep-tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-soft);
+}
+
+.rep-tool-count {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Public Rep Page — Featured Projects */
+
+.rep-projects-section {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.rep-projects-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 40px 24px 44px;
+}
+
+.rep-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.rep-project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 20px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.rep-project-card:hover {
+  border-color: var(--border-light);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.rep-project-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rep-project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rep-project-card-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.rep-project-card-desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.rep-project-card-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.rep-project-tool {
+  display: inline-block;
+  padding: 2px 7px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+
+/* Public Rep Page — Chat Section */
+
+.rep-chat-section {
+  background: var(--bg);
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rep-chat-section-header {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 40px 24px 0;
+  width: 100%;
+}
+
+.rep-chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rep-chat-container .chat-layout {
+  flex: 1;
+}
+
+.rep-chat-container .chat-frame {
+  min-height: 300px;
+}
+
+.rep-chat-container .composer-shell {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
 /* Mobile */
 
 @media (max-width: 760px) {
@@ -2527,5 +2917,43 @@ a {
     flex-direction: column;
     gap: 4px;
     align-items: flex-start;
+  }
+
+  .rep-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 28px 16px 32px;
+  }
+
+  .rep-hero-name {
+    font-size: 32px;
+  }
+
+  .rep-hero-visual {
+    display: none;
+  }
+
+  .rep-hero-stats {
+    gap: 20px;
+  }
+
+  .rep-hero-actions {
+    flex-direction: column;
+  }
+
+  .rep-builds-inner,
+  .rep-projects-inner,
+  .rep-chat-section-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .rep-builds-grid,
+  .rep-projects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rep-builds-row-label {
+    min-width: 80px;
   }
 }
